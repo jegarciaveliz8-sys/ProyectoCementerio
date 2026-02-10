@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <div class="alert alert-danger shadow-sm">
+        <h4 class="mb-0">⚠️ ALERTA DE PAGOS VENCIDOS</h4>
+    </div>
+
+    <div class="card shadow">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0">Nichos con más de 4 años de ocupación</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Nicho</th>
+                        <th>Difunto</th>
+                        <th>Fecha Defunción</th>
+                        <th>Estado</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for v in vencidos %}
+                    <tr>
+                        <td><strong>{{ v.nicho.codigo }}</strong></td>
+                        <td>{{ v.nombre_completo }}</td>
+                        <td>{{ v.fecha_entierro|date:"d/m/Y" }}</td>
+                        <td><span class="badge bg-warning text-dark">VENCIDO</span></td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="{% url 'generar_pdf' v.id %}" class="btn btn-sm btn-primary">
+                                    📄 Ver Solvencia
+                                </a>
+                                <a href="{% url 'procesar_exhumacion' v.id %}" 
+                                   class="btn btn-sm btn-outline-danger" 
+                                   onclick="return confirm('¿Confirma la exhumación de este nicho?')">
+                                    Exhumar
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-4">
+                            No hay nichos con pagos vencidos actualmente.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generador de QRs - Sanarate</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        @media print { .no-print { display: none; } }
+        .qr-card { border: 2px solid #000; padding: 10px; margin: 10px; text-align: center; width: 200px; display: inline-block; }
+        .qr-placeholder { width: 150px; height: 150px; background: #eee; margin: 0 auto; display: flex; align-items: center; justify-content: center; border: 1px solid #ccc; }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container mt-4">
+        <div class="no-print alert alert-info d-flex justify-content-between">
+            <span><b>SISTEMA DE ETIQUETADO QR</b> (Imprime y pega en los nichos)</span>
+            <button class="btn btn-primary btn-sm" onclick="window.print()">🖨️ IMPRIMIR AHORA</button>
+        </div>
+        
+        <div class="row text-center">
+            {% for n in nichos %}
+            <div class="qr-card bg-white shadow-sm">
+                <h6 class="m-0 text-uppercase">Muni Sanarate</h6>
+                <div class="qr-placeholder mt-2">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=NICHO-{{ n.codigo }}" alt="QR">
+                </div>
+                <div class="mt-2"><b>{{ n.codigo }}</b></div>
+                <small class="text-muted">{{ n.nivel.edificio.nombre }}</small>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>

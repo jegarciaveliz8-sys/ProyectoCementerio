@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CONTROL DE NICHOS - SANARATE</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        .tabla-contenedor { height: 80vh; overflow-y: auto; }
+        thead th { position: sticky; top: 0; background: #343a40; color: white; }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid p-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white d-flex justify-content-between">
+                <h4>📋 Listado Maestro de Nichos (9,998 Registros)</h4>
+                <a href="/mapa/" class="btn btn-light btn-sm">Volver al Mapa</a>
+            </div>
+            <div class="card-body tabla-contenedor">
+                <table class="table table-hover table-sm">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Código del Nicho</th>
+                            <th>Nombre del Difunto / Estado</th>
+                            <th>Coordenada Lat</th>
+                            <th>Coordenada Lng</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for n in nichos %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td><span class="badge badge-info">{{ n.codigo }}</span></td>
+                            <td>{{ n.nombre }}</td>
+                            <td class="text-muted small">{{ n.lat }}</td>
+                            <td class="text-muted small">{{ n.lng }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

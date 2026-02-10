@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SISTEMA CEMENTERIO SANARATE</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body, html { height: 100%; margin: 0; font-family: Arial, sans-serif; }
+        #map { height: 100vh; width: 100%; }
+        .panel { 
+            position: absolute; top: 10px; left: 10px; z-index: 1000; 
+            background: white; padding: 15px; border-radius: 8px; width: 280px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4); border-top: 5px solid #007bff;
+        }
+        .btn-admin {
+            display: block; width: 100%; padding: 10px; margin-bottom: 15px;
+            background: #28a745; color: white; text-align: center;
+            text-decoration: none; border-radius: 4px; font-weight: bold;
+            box-sizing: border-box;
+        }
+        .btn-admin:hover { background: #218838; }
+        .blindado-tag {
+            font-size: 10px; color: #cc0000; font-weight: bold; margin-top: 5px; text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="panel">
+        <a href="/admin/" class="btn-admin">📂 IR A ADMINISTRACIÓN</a>
+        <hr>
+        <h3 style="margin-top:10px">🔍 BUSCADOR</h3>
+        <input type="text" id="bus" style="width:100%;padding:10px;box-sizing:border-box;" placeholder="Buscar nicho o dueño...">
+        <button onclick="buscar()" style="width:100%;margin-top:10px;padding:10px;background:#007bff;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">CONSULTAR</button>
+        <div class="blindado-tag">🛡️ COORDENADAS PROTEGIDAS</div>
+    </div>
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        var map = L.map("map").setView([14.78220, -90.20450], 19);
+        L.tileLayer("https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}", { maxZoom: 22 }).addTo(map);
+        
+        var listos = {{ listos_json|safe }};
+        var marcadores = []; 
+
+        listos.forEach(function(n) {
+            var m = L.circleMarker([n.lat, n.lng], {
+                radius: 7, color: 'red', fillColor: 'red', fillOpacity: 0.8
+            }).addTo(map);
+
+            var contenido = "<b>Código: " + n.codigo + "</b><br>" +
+                            "<b>Difunto:</b> " + n.difunto + "<br>" +
+                            "<b>Dueño:</b> " + n.propietario + "<br><hr>" +
+                            "<b>Lat:</b> " + n.lat + "<br>" +
+                            "<b>Lng:</b> " + n.lng;
+
+            m.bindPopup(contenido);
+            m.busqueda = (n.codigo + " " + n.difunto + " " + n.propietario).toUpperCase();
+            marcadores.push(m);
+        });
+
+        function buscar() {
+            var txt = document.getElementById("bus").value.toUpperCase();
+            if(!txt) return;
+            var encontrado = marcadores.find(m => m.busqueda.includes(txt));
+            if (encontrado) {
+                map.flyTo(encontrado.getLatLng(), 21);
+                encontrado.openPopup();
+            } else { alert("Información no encontrada."); }
+        }
+    </script>
+</body>
+</html>

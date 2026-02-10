@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <style>
+        @page { size: letter; margin: 1cm; }
+        body { font-family: 'Arial', sans-serif; color: #333; line-height: 1.5; }
+        .border-double { border: 5px double #004a99; padding: 20px; height: 92%; }
+        .header { text-align: center; text-transform: uppercase; }
+        .escudo { width: 80px; height: 80px; margin-bottom: 10px; }
+        .titulo-doc { font-size: 24px; font-weight: bold; color: #004a99; margin: 20px 0; }
+        .info-section { margin-top: 30px; font-size: 16px; }
+        .data-label { font-weight: bold; text-decoration: underline; }
+        .footer { margin-top: 50px; text-align: center; }
+        .firma { display: inline-block; width: 200px; border-top: 1px solid #000; margin-top: 50px; padding-top: 5px; }
+        .qr-placeholder { position: absolute; bottom: 40px; right: 40px; width: 100px; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+    <div class="border-double">
+        <div class="header">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Escudo_de_Guatemala.svg/1200px-Escudo_de_Guatemala.svg.png" class="escudo">
+            <h3>Municipalidad de Sanarate, El Progreso</h3>
+            <h4>Administración de Cementerios</h4>
+            <div class="titulo-doc">TÍTULO DE ARRENDAMIENTO DE NICHO</div>
+        </div>
+
+        <div class="info-section">
+            <p>Por medio del presente, la Municipalidad de Sanarate hace constar que el nicho identificado con el código: 
+               <span class="data-label">{{ difunto.nicho.codigo }}</span>, ubicado en el <span class="data-label">{{ difunto.nicho.nivel.sector.edificio.nombre }}</span>, 
+               ha sido otorgado en arrendamiento por un periodo legal de <b>Siete (7) Años</b>.</p>
+
+            <p><b>DATOS DEL DIFUNTO:</b><br>
+               Nombre: <span class="data-label">{{ difunto.nombre_completo }}</span><br>
+               Fecha de Inhumación: <span class="data-label">{{ difunto.fecha_entierro }}</span></p>
+
+            <p><b>DATOS DEL RESPONSABLE:</b><br>
+               A nombre de: <span class="data-label">{{ responsable_nombre }}</span><br>
+               DPI/Documento: <span class="data-label">{{ dpi_responsable }}</span></p>
+               
+            <p><b>REGISTRO DE PAGO:</b><br>
+               No. de Comprobante: <span class="data-label">{{ pago.comprobante }}</span><br>
+               Monto Percibido: Q <span class="data-label">{{ pago.monto }}</span></p>
+        </div>
+
+        <div class="footer">
+            <p>Sanarate, El Progreso, {{ hoy|date:"d \d\e F \d\e Y" }}</p>
+            <div style="margin-top: 40px;">
+                <div class="firma">Encargado de Cementerios</div>
+                <div style="display: inline-block; width: 50px;"></div>
+                <div class="firma">Secretaría Municipal</div>
+            </div>
+        </div>
+        
+        <div class="qr-placeholder" style="text-align: center; font-size: 10px;">
+            <p>ID: {{ difunto.id }}</p>
+            <p>VALIDACIÓN DIGITAL</p>
+        </div>
+    </div>
+</body>
+</html>

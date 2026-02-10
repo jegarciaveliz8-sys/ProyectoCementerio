@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0"><i class="bi bi-person-plus"></i> Registrar Nuevo Entierro</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-primary">Nicho Seleccionado:</label>
+                            <input type="text" name="nicho_codigo" class="form-control form-control-lg bg-light" 
+                                   value="{{ nicho_codigo }}" readonly 
+                                   placeholder="Seleccione un nicho desde el mapa">
+                            <div class="form-text">Este código se carga automáticamente desde el inventario.</div>
+                        </div>
+
+                        <hr>
+
+                        <div class="mb-3">
+                            <label class="form-label">Nombre Completo del Fallecido:</label>
+                            <input type="text" name="nombre" class="form-control" required>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">DPI / CUI:</label>
+                                <input type="text" name="dpi" class="form-control">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Fecha de Defunción:</label>
+                                <input type="date" name="fecha_muerte" class="form-control" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Nombre del Responsable (Familiar):</label>
+                            <input type="text" name="responsable" class="form-control">
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success fw-bold">
+                                <i class="bi bi-save"></i> GUARDAR REGISTRO
+                            </button>
+                            <a href="{% url 'inventario' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Volver al Mapa
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catastro Sanarate - Panel Principal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Inter', 'Segoe UI', sans-serif; }
+        
+        /* Membrete Institucional */
+        .header-muni {
+            background: white;
+            border-bottom: 6px solid #1a5276;
+            padding: 25px 0;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+        }
+        .titulos h1 { font-size: 2rem; font-weight: 800; color: #1a242f; margin: 0; }
+        .titulos h2 { font-size: 1.1rem; color: #2980b9; font-weight: 600; margin-bottom: 0; }
+        .titulos p { font-size: 0.8rem; color: #adb5bd; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+        
+        /* Tarjetas de Datos */
+        .stat-card {
+            border: none;
+            border-radius: 12px;
+            padding: 20px;
+            color: white;
+            transition: 0.3s;
+        }
+        .stat-card:hover { transform: scale(1.02); }
+        
+        /* Botones de Módulo */
+        .module-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            text-decoration: none;
+            color: #333;
+            border: 1px solid #eee;
+            transition: 0.3s;
+            height: 100%;
+            display: block;
+        }
+        .module-card:hover {
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            border-color: #2980b9;
+            transform: translateY(-5px);
+        }
+        .module-card i { font-size: 2.5rem; margin-bottom: 15px; }
+        
+        .recent-activity {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header-muni">
+    <div class="container text-center">
+        <div class="row align-items-center">
+            <div class="col-md-2">
+                <i class="fas fa-landmark fa-4x text-primary"></i>
+            </div>
+            <div class="col-md-8 titulos">
+                <p>República de Guatemala</p>
+                <h1>MUNICIPALIDAD DE SANARATE</h1>
+                <h2>DEPARTAMENTO DE EL PROGRESO</h2>
+                <span class="badge bg-light text-dark border mt-2">Gestión Geográfica de Cementerio Municipal</span>
+            </div>
+            <div class="col-md-2">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Flag_of_Guatemala.svg/800px-Flag_of_Guatemala.svg.png" width="70" class="shadow-sm">
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container pb-5">
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="stat-card bg-dark">
+                <small>Total Capacidad</small>
+                <h3>5,000</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card bg-success">
+                <small>Nichos Disponibles</small>
+                <h3>4,995</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card bg-danger">
+                <small>Nichos Ocupados</small>
+                <h3>5</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card bg-primary">
+                <small>Difuntos Registrados</small>
+                <h3>5</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <h5 class="fw-bold text-muted mb-3">OPERACIONES DEL SISTEMA</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <a href="/inventario/" class="module-card">
+                        <i class="fas fa-map-marked-alt text-info"></i>
+                        <h5>Mapa Satelital Interactiva</h5>
+                        <p class="small text-muted">Localización de nichos por GPS en tiempo real.</p>
+                    </a>
+                </div>
+                <div class="col-md-6">
+                    <a href="/admin/registros/registrodifunto/add/" class="module-card">
+                        <i class="fas fa-file-signature text-success"></i>
+                        <h5>Registrar Nuevo Entierro</h5>
+                        <p class="small text-muted">Asignar una persona fallecida a un nicho.</p>
+                    </a>
+                </div>
+                <div class="col-md-6">
+                    <a href="/admin/registros/pago/" class="module-card">
+                        <i class="fas fa-wallet text-warning"></i>
+                        <h5>Control de Pagos</h5>
+                        <p class="small text-muted">Administración de títulos y servicios.</p>
+                    </a>
+                </div>
+                <div class="col-md-6">
+                    <a href="/admin/" class="module-card">
+                        <i class="fas fa-users-cog text-secondary"></i>
+                        <h5>Configuración Avanzada</h5>
+                        <p class="small text-muted">Gestión de usuarios, sectores y niveles.</p>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <h5 class="fw-bold text-muted mb-3">ÚLTIMOS REGISTROS</h5>
+            <div class="recent-activity shadow-sm">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item px-0">
+                        <small class="text-primary fw-bold">NI-0005</small><br>
+                        <span class="small">Roberto Gomez</span>
+                    </li>
+                    <li class="list-group-item px-0">
+                        <small class="text-primary fw-bold">NI-0004</small><br>
+                        <span class="small">Ana Lucia Morales</span>
+                    </li>
+                    <li class="list-group-item px-0">
+                        <small class="text-primary fw-bold">NI-0003</small><br>
+                        <span class="small">Carlos Estuardo Lopez</span>
+                    </li>
+                </ul>
+                <div class="d-grid mt-3">
+                    <a href="/admin/registros/registrodifunto/" class="btn btn-outline-secondary btn-sm">Ver todos los registros</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer class="text-center py-4 text-muted border-top bg-white">
+    <small>© 2026 Municipalidad de Sanarate, El Progreso - Control Interno</small>
+</footer>
+
+</body>
+</html>

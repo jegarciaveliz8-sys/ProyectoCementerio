@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SISTEMA CEMENTERIO SANARATE</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body, html { height: 100%; margin: 0; font-family: Arial, sans-serif; }
+        #map { height: 100vh; width: 100%; }
+        .panel { 
+            position: absolute; top: 10px; left: 10px; z-index: 1000; 
+            background: white; padding: 15px; border-radius: 8px; width: 280px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4); border-top: 5px solid #007bff;
+        }
+        #res { 
+            margin-top: 15px; display: none; padding: 10px; 
+            background: #f8f9fa; border-radius: 6px; border: 1px solid #ddd;
+            color: #333;
+        }
+        .nombre-item {
+            display: block; padding: 5px 0; border-bottom: 1px solid #eee;
+            color: #d9534f; font-weight: bold; font-size: 14px;
+        }
+        .btn-admin {
+            position: fixed; top: 15px; right: 15px; z-index: 2000;
+            background: #28a745; color: white; padding: 12px;
+            text-decoration: none; border-radius: 8px; font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4); border: 2px solid white;
+        }
+    </style>
+</head>
+<body>
+    <a href="/admin/registros/nicho/" class="btn-admin">📂 IR A ADMINISTRACIÓN</a>
+    <div class="panel">
+        <h3 style="margin-top:0">🔍 Buscador</h3>
+        <input type="text" id="bus" style="width:100%;padding:10px;box-sizing:border-box;margin-bottom:10px;" placeholder="Ej: A1-1-025">
+        <button onclick="buscar()" style="width:100%;padding:10px;background:#007bff;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:bold">BUSCAR Y ENFOCAR</button>
+        
+        <div id="res"></div>
+    </div>
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        var map = L.map('map').setView([14.78220, -90.20450], 19);
+        L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { maxZoom: 22 }).addTo(map);
+
+        var listos = {{ listos_json|safe }};
+        var marcadores = {}; 
+
+        listos.forEach(function(n) {
+            var esOcupado = (n.difunto && n.difunto.trim() !== "" && n.difunto.toUpperCase() !== "DISPONIBLE");
+            
+            // Separar nombres por coma, guion o barra y crear lista con iconos
+            var nombresArray = n.difunto.split(/[,/-]/);
+            var listaHTML = nombresArray.map(function(nom) {
+                return '<span class="nombre-item">👤 ' + nom.trim() + '</span>';
+            }).join('');
+
+            var m = L.circleMarker([n.lat, n.lng], {
+                radius: 6, color: esOcupado ? 'red' : 'green', fillColor: esOcupado ? 'red' : 'green', fillOpacity: 0.8
+            }).addTo(map).bindTooltip("<b>" + n.codigo + "</b><br>" + n.difunto);
+            
+            // Guardar info para el buscador
+            m.htmlFinal = '<strong>Nicho: ' + n.codigo + '</strong><hr>' + listaHTML;
+            marcadores[n.codigo.toUpperCase()] = m;
+        });
+
+        function buscar() {
+            var c = document.getElementById("bus").value.toUpperCase().trim();
+            var r = document.getElementById("res");
+            
+            if (marcadores[c]) {
+                var marcador = marcadores[c];
+                map.setView(marcador.getLatLng(), 21);
+                marcador.openTooltip();
+                
+                // MOSTRAR RESULTADOS EN EL PANEL
+                r.innerHTML = marcador.htmlFinal;
+                r.style.display = "block";
+            } else {
+                alert("Nicho no encontrado");
+                r.style.display = "none";
+            }
+        }
+    </script>
+</body>
+</html>

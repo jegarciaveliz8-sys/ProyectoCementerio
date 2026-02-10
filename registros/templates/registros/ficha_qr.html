@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        body { background: #f0f2f5; }
+        .card-oficial { border: none; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .header-muni { background: linear-gradient(135deg, #004a99 0%, #002d5f 100%); color: white; padding: 30px 20px; text-align: center; }
+        .status-badge { padding: 8px 20px; border-radius: 50px; font-weight: bold; font-size: 0.9rem; }
+        .info-label { color: #6c757d; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+        .info-value { color: #212529; font-weight: 600; font-size: 1.1rem; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container py-4">
+        {% if valido %}
+        <div class="card card-oficial">
+            <div class="header-muni">
+                <h5 class="mb-0">MUNICIPALIDAD DE SANARATE</h5>
+                <small>Sistema de Certificación Digital</small>
+            </div>
+            <div class="card-body p-4">
+                <div class="text-center mb-4">
+                    <span class="status-badge bg-success text-white">✓ ESPACIO REGISTRADO</span>
+                </div>
+                
+                <p class="info-label">Nombre del Difunto</p>
+                <p class="info-value">{{ difunto.nombre_completo }}</p>
+
+                <div class="row">
+                    <div class="col-6">
+                        <p class="info-label">Nicho No.</p>
+                        <p class="info-value">{{ difunto.espacio.codigo }}</p>
+                    </div>
+                    <div class="col-6">
+                        <p class="info-label">Sector</p>
+                        <p class="info-value">{{ difunto.espacio.nivel.sector.nombre }}</p>
+                    </div>
+                </div>
+
+                <p class="info-label">Estado de Pago</p>
+                <p class="info-value text-primary">{{ difunto.pago|default:"Al Día" }}</p>
+
+                <hr>
+                <div class="text-center">
+                    <small class="text-muted">Este documento digital certifica la propiedad y ubicación del nicho en el Cementerio Municipal de Sanarate.</small>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-danger text-center mt-5">
+            <h4>⚠️ Código no válido</h4>
+            <p>El código escaneado no coincide con nuestros registros oficiales.</p>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

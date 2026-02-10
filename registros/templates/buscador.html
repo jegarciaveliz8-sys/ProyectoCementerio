@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Buscador PRO - Sanarate</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        body { background: #e9ecef; }
+        .ficha-difunto { background: white; border-radius: 15px; overflow: hidden; margin-top: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .foto-nicho { width: 100%; height: 250px; object-fit: cover; background: #333; }
+        .btn-muni { background: #ff6600; color: white; border: none; font-weight: bold; }
+    </style>
+</head>
+<body class="p-3">
+    <div class="container" style="max-width: 800px;">
+        <div class="text-center mb-4">
+            <h2 class="fw-bold">🔍 CONSULTA DE REGISTROS</h2>
+            <p class="text-muted">CEMENTERIO MUNICIPAL DE SANARATE</p>
+        </div>
+
+        <form method="GET" class="input-group mb-4 shadow-sm">
+            <input type="text" name="q" class="form-control form-control-lg" placeholder="Escriba el nombre del difunto..." value="{{ query }}">
+            <button class="btn btn-muni px-4" type="submit">BUSCAR</button>
+        </form>
+
+        {% for d in resultados %}
+        <div class="ficha-difunto animate__animated animate__fadeInUp">
+            <div class="row g-0">
+                <div class="col-md-4">
+                    <img src="https://via.placeholder.com/400x400.png?text=SIN+FOTO" class="foto-nicho" alt="Foto Nicho">
+                </div>
+                <div class="col-md-8 p-4">
+                    <h3 class="mb-1 text-uppercase">{{ d.nombre_completo }}</h3>
+                    <p class="text-danger fw-bold mb-3">📍 {{ d.nicho.edificio.nombre }} - Nicho: {{ d.nicho.codigo }}</p>
+                    <div class="row mb-3">
+                        <div class="col-6"><small class="text-muted d-block">Fallecimiento:</small> <b>{{ d.fecha_fallecimiento }}</b></div>
+                        <div class="col-6"><small class="text-muted d-block">Estado Cuenta:</small> <span class="badge bg-success">SOLVENTE</span></div>
+                    </div>
+                    <a href="{% url 'mapa_visual' %}" class="btn btn-outline-dark btn-sm w-100">VER UBICACIÓN EN MAPA GPS</a>
+                    <a href="/descargar_titulo/{{ d.id }}/" class="btn btn-success btn-sm w-100 mt-2">📄 DESCARGAR TÍTULO OFICIAL</a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+            {% if query %}
+            <div class="alert alert-warning text-center">No se encontraron registros con ese nombre.</div>
+            {% endif %}
+        {% endfor %}
+        
+        <div class="text-center mt-5">
+            <a href="/" class="text-decoration-none text-secondary">← Volver al Panel de Control</a>
+        </div>
+    </div>
+</body>
+</html>

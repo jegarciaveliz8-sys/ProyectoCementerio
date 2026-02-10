@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Etiquetas QR - Sanarate</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); 
+            gap: 15px; 
+        }
+        .etiqueta { 
+            background: white; 
+            border: 2px solid #333; 
+            padding: 10px; 
+            text-align: center; 
+            border-radius: 8px;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+        }
+        .qr-img { width: 130px; height: 130px; margin: 5px 0; }
+        .codigo { font-weight: bold; font-size: 16px; color: #004a99; display: block; }
+        .muni { font-size: 9px; font-weight: bold; text-transform: uppercase; color: #666; }
+        .sector { font-size: 10px; color: #333; }
+        @media print {
+            .no-print { display: none; }
+            body { background: white; padding: 0; }
+            .etiqueta { box-shadow: none; border: 1px solid #000; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="margin-bottom: 20px; text-align: center;">
+        <button onclick="window.print()" style="padding: 10px 20px; cursor: pointer; background: #004a99; color: white; border: none; border-radius: 5px;">
+            🖨️ Imprimir Hoja de Etiquetas
+        </button>
+        <a href="/" style="margin-left: 10px; text-decoration: none; color: #666;">Volver al Inicio</a>
+    </div>
+
+    <div class="grid">
+        {% for nicho in nichos %}
+        <div class="etiqueta">
+            <div class="muni">Municipalidad de Sanarate</div>
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ nicho.codigo }}" class="qr-img" alt="QR {{ nicho.codigo }}">
+            <span class="codigo">{{ nicho.codigo }}</span>
+            <div class="sector">{{ nicho.nivel.sector.edificio.nombre }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>

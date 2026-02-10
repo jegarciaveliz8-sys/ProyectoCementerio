@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edición Geográfica Real - Sanarate</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body class="bg-light">
+    <div class="container py-4">
+        <div class="card shadow">
+            <div class="card-header bg-dark text-white">
+                <h4>📍 Ajuste de Coordenadas Reales: {{ nicho.codigo }}</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{% url 'guardar_entierro' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="nicho_codigo" value="{{ nicho.codigo }}">
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label>Latitud Real (GPS):</label>
+                            <input type="text" name="lat" class="form-control" value="{{ nicho.lat }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label>Longitud Real (GPS):</label>
+                            <input type="text" name="lng" class="form-control" value="{{ nicho.lng }}">
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    <h5>Datos del Difunto</h5>
+                    <input type="text" name="nombre_difunto" class="form-control mb-3" value="{{ nicho.nombre_difunto|default:'' }}">
+                    
+                    <button type="submit" class="btn btn-success btn-block">💾 GUARDAR POSICIÓN Y DATOS</button>
+                    <a href="{% url 'mapa_inventario' %}" class="btn btn-secondary btn-block">Volver al Mapa</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

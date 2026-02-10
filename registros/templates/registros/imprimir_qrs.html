@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="p-4">
+    <h3 class="text-primary mb-4 text-center">Generador de Identificadores QR</h3>
+    <div class="row">
+        {% for d in difuntos %}
+        <div class="col-4 text-center border p-3">
+            <div style="width:100px; height:100px; background:#eee; margin:auto; display:flex; align-items:center; justify-content:center;">QR</div>
+            <p class="small fw-bold mt-2">{{ d.nombre_completo }}</p>
+            <p class="text-muted" style="font-size:10px;">Nicho: {{ d.espacio.codigo }}</p>
+        </div>
+        {% empty %}
+        <p>No hay registros para generar códigos.</p>
+        {% endfor %}
+    </div>
+    <button onclick="window.print()" class="btn btn-primary w-100 mt-4">Imprimir Etiquetas</button>
+    <a href="/" class="btn btn-link w-100">Volver</a>
+</body>
+</html>

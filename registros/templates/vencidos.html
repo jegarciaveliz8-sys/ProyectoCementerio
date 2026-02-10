@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Control de Pagos - Sanarate</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body class="bg-light">
+    <div class="container mt-5">
+        <div class="card shadow border-0">
+            <div class="card-header bg-dark text-white d-flex justify-content-between">
+                <h4 class="mb-0">⚠️ ESTADO DE PAGOS Y VENCIMIENTOS</h4>
+                <a href="{% url 'index' %}" class="btn btn-outline-light btn-sm">Regresar</a>
+            </div>
+            <div class="card-body">
+                <table class="table table-bordered">
+                    <thead class="bg-secondary text-white">
+                        <tr>
+                            <th>Nicho</th>
+                            <th>Difunto</th>
+                            <th>Vencimiento</th>
+                            <th>Estado Crítico</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for n in vencidos %}
+                        <tr class="table-danger">
+                            <td><b>{{ n.codigo }}</b></td>
+                            <td>{{ n.nombre_difunto }}</td>
+                            <td>{{ n.fecha_vencimiento }}</td>
+                            <td><span class="badge badge-danger text-uppercase">Vencido / Exhumación</span></td>
+                        </tr>
+                        {% endfor %}
+                        
+                        {% for p in proximos %}
+                        <tr class="table-warning">
+                            <td><b>{{ p.codigo }}</b></td>
+                            <td>{{ p.nombre_difunto }}</td>
+                            <td>{{ p.fecha_vencimiento }}</td>
+                            <td><span class="badge badge-warning text-uppercase">Próximo a Vencer</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

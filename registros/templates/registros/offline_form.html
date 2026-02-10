@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Captura de Campo - Sanarate</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f0f2f5; }
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        input, select, textarea { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; background: #28a745; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; }
+        #status { margin-top: 10px; font-weight: bold; color: #d9534f; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>📷 Registro de Campo</h2>
+        <div id="status"></div>
+        
+        <form id="fotoForm" method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            <label>Seleccionar Nicho:</label>
+            <select name="nicho_id" required>
+                <option value="">-- Buscar Código --</option>
+                {% for nicho in nichos %}
+                <option value="{{ nicho.id }}">{{ nicho.codigo }}</option>
+                {% endfor %}
+            </select>
+
+            <label>Tomar Foto:</label>
+            <input type="file" name="imagen" accept="image/*" capture="camera" required>
+
+            <label>Observaciones:</label>
+            <textarea name="comentario" rows="3" placeholder="Ej: Nicho rajado, requiere pintura..."></textarea>
+
+            <button type="submit">Enviar al Sistema</button>
+        </form>
+    </div>
+
+    <script>
+        const status = document.getElementById('status');
+        
+        // Verificar conexión cada 5 segundos
+        setInterval(() => {
+            if (!navigator.onLine) {
+                status.innerText = "⚠️ MODO OFFLINE: Sin Internet. La foto se guardará en espera.";
+            } else {
+                status.innerText = "✅ CONECTADO AL SERVIDOR";
+            }
+        }, 5000);
+
+        // Lógica simple: Si no hay red, avisar al usuario
+        document.getElementById('fotoForm').onsubmit = function(e) {
+            if (!navigator.onLine) {
+                alert("No tienes internet. Mantén esta pestaña abierta y dale a enviar cuando regreses a la oficina.");
+                return false; 
+            }
+        };
+    </script>
+</body>
+</html>

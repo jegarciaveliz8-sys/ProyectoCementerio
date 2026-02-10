@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Censo Digital - Sanarate</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        .nicho-box { 
+            width: 80px; height: 80px; margin: 5px; 
+            display: inline-flex; align-items: center; justify-content: center;
+            border-radius: 8px; font-weight: bold; font-size: 0.8rem;
+            color: white; text-align: center; cursor: pointer;
+        }
+        .ocupado { background: #e74c3c; border: 2px solid #c0392b; }
+        .disponible { background: #2ecc71; border: 2px solid #27ae60; }
+        .mantenimiento { background: #f1c40f; border: 2px solid #f39c12; }
+    </style>
+</head>
+<body class="bg-dark text-white p-4">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>📊 CENSO DIGITAL DE NICHOS</h1>
+            <a href="/" class="btn btn-outline-light">VOLVER</a>
+        </div>
+
+        <div class="mb-4">
+            <span class="badge bg-success">DISPONIBLE</span>
+            <span class="badge bg-danger">OCUPADO</span>
+            <span class="badge bg-warning text-dark">MANTENIMIENTO</span>
+        </div>
+
+        {% for edificio in edificios %}
+        <div class="card bg-secondary mb-4 p-3">
+            <h3 class="text-uppercase">{{ edificio.nombre }}</h3>
+            <div class="d-flex flex-wrap">
+                {% for n in edificio.nicho_set.all %}
+                <div class="nicho-box {% if n.registrodifunto_set.exists %}ocupado{% else %}disponible{% endif %}" 
+                     title="{{ n.codigo }}">
+                    {{ n.codigo }}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>
