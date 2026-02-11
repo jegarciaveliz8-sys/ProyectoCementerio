@@ -1,71 +1,167 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>SISTEMA CEMENTERIO SANARATE</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <title>Sistema Municipal - Sanarate Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <style>
-        body, html { height: 100%; margin: 0; font-family: Arial, sans-serif; }
-        #map { height: 100vh; width: 100%; }
-        .panel { 
-            position: absolute; top: 10px; left: 10px; z-index: 1000; 
-            background: white; padding: 15px; border-radius: 8px; width: 280px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.4); border-top: 5px solid #007bff;
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        #map { height: 100vh; width: 100%; z-index: 1; }
+        
+        /* Panel Lateral */
+        .panel-busqueda {
+            position: absolute; top: 10px; left: 10px; z-index: 1000;
+            background: white; padding: 15px; border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4); width: 280px;
         }
+
+        /* Botón Administrador */
         .btn-admin {
-            display: block; width: 100%; padding: 10px; margin-bottom: 15px;
-            background: #28a745; color: white; text-align: center;
-            text-decoration: none; border-radius: 4px; font-weight: bold;
-            box-sizing: border-box;
+            display: block; text-align: center; background: #343a40; color: white !important;
+            text-decoration: none; padding: 10px; border-radius: 6px; font-weight: bold;
+            margin-bottom: 12px; font-size: 14px; transition: 0.3s;
         }
-        .btn-admin:hover { background: #218838; }
-        .blindado-tag {
-            font-size: 10px; color: #cc0000; font-weight: bold; margin-top: 5px; text-align: center;
+        .btn-admin:hover { background: #000; }
+
+        .stats-box {
+            margin: 10px 0; padding: 10px; background: #f0f4f7;
+            border-radius: 6px; border-left: 5px solid #1b5e20;
+            font-size: 12px; line-height: 1.6; color: #333;
         }
+        .filtros { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
+        .btn-filtro { font-size: 10px; padding: 6px 8px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer; background: #fff; font-weight: bold; }
+        
+        input { width: 100%; padding: 12px; border: 2px solid #28a745; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        .resultados-container { max-height: 200px; overflow-y: auto; margin-top: 10px; border-top: 1px solid #eee; }
+        .item-nicho { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 13px; }
+
+        /* Botón GPS */
+        .btn-gps {
+            position: absolute; bottom: 30px; right: 20px; z-index: 1000;
+            background: white; border: 2px solid #28a745; border-radius: 50%;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.3); cursor: pointer;
+            width: 55px; height: 55px; font-size: 25px; display: flex; align-items: center; justify-content: center;
+        }
+
+        /* Estilos del Popup */
+        .popup-nicho { min-width: 200px; padding: 5px; }
+        .popup-title { font-size: 17px; color: #1b5e20; font-weight: bold; display: block; margin-bottom: 5px; }
+        .popup-label { font-weight: bold; color: #555; }
+        .coord-info { font-family: monospace; font-size: 11px; color: #444; background: #f4f4f4; padding: 6px; border-radius: 4px; display: block; margin: 10px 0; border: 1px solid #ddd; }
+        .btn-pdf { display: block; text-align: center; padding: 10px; background: #007bff; color: white !important; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 14px; margin-top: 10px; }
     </style>
 </head>
 <body>
-    <div class="panel">
-        <a href="/admin/" class="btn-admin">📂 IR A ADMINISTRACIÓN</a>
-        <hr>
-        <h3 style="margin-top:10px">🔍 BUSCADOR</h3>
-        <input type="text" id="bus" style="width:100%;padding:10px;box-sizing:border-box;" placeholder="Buscar nicho o dueño...">
-        <button onclick="buscar()" style="width:100%;margin-top:10px;padding:10px;background:#007bff;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">CONSULTAR</button>
-        <div class="blindado-tag">🛡️ COORDENADAS PROTEGIDAS</div>
-    </div>
-    <div id="map"></div>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        var map = L.map("map").setView([14.78220, -90.20450], 19);
-        L.tileLayer("https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}", { maxZoom: 22 }).addTo(map);
+
+    <div class="panel-busqueda">
+        <a href="/admin/" class="btn-admin">⚙️ IR A ADMINISTRACIÓN</a>
+
+        <div style="font-weight: bold; color: #1b5e20; margin-bottom: 10px; font-size: 16px;">🏛️ GESTIÓN SANARATE</div>
         
-        var listos = {{ listos_json|safe }};
-        var marcadores = []; 
+        <input type="text" id="txtBusqueda" placeholder="Buscar Nombre o Código..." onkeyup="buscarEnTiempoReal()">
+        
+        <div class="filtros" style="margin-top:10px;">
+            <button class="btn-filtro" onclick="filtrarMapa('TODOS')">TODOS</button>
+            <button class="btn-filtro" style="color:#15803d" onclick="filtrarMapa('LIBRE')">LIBRES</button>
+            <button class="btn-filtro" style="color:#b91c1c" onclick="filtrarMapa('DEUDA')">MORA</button>
+        </div>
+        <div id="stats" class="stats-box">Calculando...</div>
+        <div id="resultados" class="resultados-container"></div>
+    </div>
 
-        listos.forEach(function(n) {
-            var m = L.circleMarker([n.lat, n.lng], {
-                radius: 7, color: 'red', fillColor: 'red', fillOpacity: 0.8
-            }).addTo(map);
+    <button class="btn-gps" onclick="verMiUbicacion()">📍</button>
 
-            var contenido = "<b>Código: " + n.codigo + "</b><br>" +
-                            "<b>Difunto:</b> " + n.difunto + "<br>" +
-                            "<b>Dueño:</b> " + n.propietario + "<br><hr>" +
-                            "<b>Lat:</b> " + n.lat + "<br>" +
-                            "<b>Lng:</b> " + n.lng;
+    <div id="map"></div>
 
-            m.bindPopup(contenido);
-            m.busqueda = (n.codigo + " " + n.difunto + " " + n.propietario).toUpperCase();
-            marcadores.push(m);
+    <script>
+        var map = L.map('map', { maxZoom: 22 }).setView([14.78220, -90.19150], 18);
+        L.tileLayer('http://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+            maxZoom: 22, subdomains:['mt0','mt1','mt2','mt3']
+        }).addTo(map);
+
+        var nichosData = {{ listos_json|safe }};
+        var layers = [];
+        var marcadorUsuario = null;
+        var markersDict = {}; // Para búsqueda rápida por ID
+
+        function cargarMapa(filtro = 'TODOS') {
+            layers.forEach(l => map.removeLayer(l));
+            layers = [];
+            let c = { total: 0, libres: 0, deuda: 0, ok: 0 };
+
+            nichosData.forEach(function(n) {
+                let esDeuda = (n.color === 'red');
+                let esLibre = (n.difunto === "DISPONIBLE");
+                c.total++;
+                if (esLibre) c.libres++; else if (esDeuda) c.deuda++; else c.ok++;
+
+                if (n.lat == 0 || n.lng == 0) return;
+                if (filtro === 'DEUDA' && !esDeuda) return;
+                if (filtro === 'LIBRE' && !esLibre) return;
+
+                let marker = L.circleMarker([n.lat, n.lng], {
+                    radius: 7, fillColor: n.color, color: "#fff", weight: 2, fillOpacity: 0.9
+                }).addTo(map);
+
+                let popupContent = `
+                    <div class="popup-nicho">
+                        <span class="popup-title">Nicho: ${n.codigo}</span><hr>
+                        <span class="popup-label">👤 Dueño:</span> ${n.propietario}<br>
+                        <span class="popup-label">⚰️ Difunto:</span> ${n.difunto}<br>
+                        <span class="popup-label">📅 Vencimiento:</span> ${n.vencimiento || 'N/A'}<br>
+                        <span class="coord-info">📍 GPS: ${n.lat}, ${n.lng}</span>
+                        <a href='/generar-titulo/${n.id}/' class='btn-pdf' target='_blank'>🖨️ IMPRIMIR TÍTULO</a>
+                    </div>
+                `;
+                marker.bindPopup(popupContent);
+                marker.nichoData = n;
+                layers.push(marker);
+                markersDict[n.id] = marker; // Guardamos referencia
+            });
+
+            document.getElementById('stats').innerHTML = `
+                <b>RESUMEN:</b><br>
+                📊 Total: ${c.total} | 🔴 Mora: ${c.deuda}<br>
+                🟢 Libres: ${c.libres} | 🔵 Al día: ${c.ok}
+            `;
+
+            // --- LÓGICA DE SALTO AUTOMÁTICO ---
+            console.log("ID RECIBIDO:", "{{ nicho_seleccionado }}"); var seleccionadoId = "{{ nicho_seleccionado }}";
+            if (seleccionadoId && markersDict[seleccionadoId]) {
+                var m = markersDict[seleccionadoId];
+                map.setView(m.getLatLng(), 21);
+                m.openPopup();
+            }
+        }
+
+        function verMiUbicacion() { map.locate({setView: true, maxZoom: 19}); }
+        map.on('locationfound', function(e) {
+            if (marcadorUsuario) map.removeLayer(marcadorUsuario);
+            marcadorUsuario = L.circleMarker(e.latlng, {
+                radius: 10, fillColor: "#007bff", color: "white", weight: 3, fillOpacity: 1
+            }).addTo(map).bindPopup("<b>Usted está aquí</b>").openPopup();
         });
 
-        function buscar() {
-            var txt = document.getElementById("bus").value.toUpperCase();
-            if(!txt) return;
-            var encontrado = marcadores.find(m => m.busqueda.includes(txt));
-            if (encontrado) {
-                map.flyTo(encontrado.getLatLng(), 21);
-                encontrado.openPopup();
-            } else { alert("Información no encontrada."); }
+        function buscarEnTiempoReal() {
+            var s = document.getElementById('txtBusqueda').value.toUpperCase();
+            var res = document.getElementById('resultados');
+            res.innerHTML = "";
+            if (s.length < 2) return;
+            layers.forEach(function(m) {
+                var n = m.nichoData;
+                if (n.codigo.includes(s) || n.difunto.includes(s) || n.propietario.includes(s)) {
+                    var div = document.createElement('div');
+                    div.className = 'item-nicho';
+                    div.innerHTML = `<b>${n.codigo}</b><br><small>${n.difunto}</small>`;
+                    div.onclick = function() { map.setView(m.getLatLng(), 21); m.openPopup(); };
+                    res.appendChild(div);
+                }
+            });
         }
+
+        function filtrarMapa(t) { cargarMapa(t); }
+        cargarMapa();
     </script>
 </body>
 </html>

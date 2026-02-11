@@ -1,4 +1,6 @@
 from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 class Nicho(models.Model):
     codigo = models.CharField(max_length=50, unique=True)
@@ -6,8 +8,6 @@ class Nicho(models.Model):
     lng = models.FloatField()
     nombre_difunto = models.TextField(blank=True, null=True, verbose_name="Nombres de Difuntos")
     estado_id = models.BigIntegerField(default=1)
-    
-    # --- NUEVOS CAMPOS FASE DE PROPIEDAD ---
     propietario = models.CharField(max_length=200, blank=True, null=True, verbose_name="Dueño Legal")
     dpi_propietario = models.CharField(max_length=15, blank=True, null=True, verbose_name="DPI")
     numero_titulo = models.CharField(max_length=50, blank=True, null=True, verbose_name="No. de Título/Escritura")
@@ -28,8 +28,32 @@ class FotoCampo(models.Model):
     comentario = models.TextField(blank=True, null=True)
 
     class Meta:
-        verbose_name = "Foto de Campo"
-        verbose_name = "Fotos de Campo"
+        verbose_name_plural = "Fotos de Campo"
 
     def __str__(self):
         return f"Foto de {self.nicho.codigo} - {self.fecha_toma.strftime('%d/%m/%Y')}"
+
+class Exhumacion(models.Model):
+    nicho = models.ForeignKey(Nicho, on_delete=models.CASCADE, related_name='exhumaciones', verbose_name="Nicho Relacionado")
+    fecha_exhumacion = models.DateField(verbose_name="Fecha de la Exhumación")
+    nombre_difunto_retirado = models.CharField(max_length=200, verbose_name="Nombre del Difunto Retirado")
+    solicitante = models.CharField(max_length=200, verbose_name="Familiar que solicita / Autoridad")
+    documento_autorizacion = models.CharField(max_length=100, blank=True, null=True, verbose_name="No. de Oficio o Acta")
+    destino_restos = models.CharField(max_length=255, verbose_name="Destino de los restos (Osario/Otro)")
+    observaciones = models.TextField(blank=True, null=True, verbose_name="Notas del Proceso")
+
+    class Meta:
+        verbose_name = "Exhumación"
+        verbose_name_plural = "Exhumaciones"
+
+    def __str__(self):
+        return f"Exhumación {self.nicho.codigo} - {self.fecha_exhumacion}"
+
+# --- SENSOR AUTOMÁTICO (SIGNAL) ---
+@receiver(post_save, sender=Exhumacion)
+def limpiar_nicho_tras_exhumacion(sender, instance, created, **kwargs):
+    if created: # Solo si es una exhumación nueva
+        nicho = instance.nicho
+        nicho.estado_id = 1  # 1 = Disponible
+        nicho.nombre_difunto = "" # Limpiamos el nombre
+        nicho.save()
