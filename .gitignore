@@ -7,3 +7,5 @@ CEMENTERIO_RESPALDO_*.sqlite3
 backups/
 venv_cementerio/
 .DS_Store
+staticfiles/
+registros/__pycache__/
