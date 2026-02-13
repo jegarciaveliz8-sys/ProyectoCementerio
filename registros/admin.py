@@ -5,30 +5,37 @@ from django.utils.html import format_html
 from django.http import HttpResponse
 from django.utils import timezone
 from .models import Nicho, FotoCampo, Exhumacion
+class FiltroUbicacion(admin.SimpleListFilter):
+    title = "Estado de Ubicación"
+    parameter_name = "ubicacion"
+    def lookups(self, request, model_admin):
+        return (
+            ("real", "📍 Solo Reales (Mapeados)"),
+            ("reserva", "☁️ Solo Reservas (Amontonados)"),
+        )
+    def queryset(self, request, queryset):
+        if self.value() == "real":
+            return queryset.exclude(lat=14.7822)
+        if self.value() == "reserva":
+            return queryset.filter(lat=14.7822)
+        return queryset
 
-# --- FORMULARIO CON VALIDACIONES ---
+
 class NichoAdminForm(forms.ModelForm):
     class Meta:
         model = Nicho
         fields = '__all__'
 
-    def clean_dpi_propietario(self):
-        dpi = self.cleaned_data.get('dpi_propietario')
-        if dpi:
-            dpi_limpio = dpi.replace(" ", "").replace("-", "")
-            if not dpi_limpio.isdigit() or len(dpi_limpio) != 13:
-                raise forms.ValidationError("🚨 El DPI debe tener exactamente 13 números.")
-            return dpi_limpio
-        return dpi
-
-# --- ADMINISTRACIÓN DE NICHOS ---
 @admin.register(Nicho)
 class NichoAdmin(admin.ModelAdmin):
     form = NichoAdminForm
-    list_display = ('codigo', 'propietario', 'nombre_difunto', 'ver_estado', 'alerta_pago', 'ir_al_mapa', 'ver_qr')
-    search_fields = ('codigo', 'propietario', 'nombre_difunto')
-    list_filter = ('estado_id', 'fecha_vencimiento')
+    list_display = ('codigo', 'propietario', 'nombre_difunto', 'lat', 'lng', 'ver_estado', 'alerta_pago', 'ir_al_mapa')
+    search_fields = ('codigo', 'propietario', 'nombre_difunto', 'dpi_propietario')
+    list_filter = (FiltroUbicacion, 'estado_id', 'fecha_vencimiento')
     actions = ['descargar_pdf', 'exportar_excel']
+    
+    # Hemos quitado readonly_fields para que puedas corregir las coordenadas
+    # Hemos quitado has_delete_permission para que PUEDAS ELIMINAR
 
     def ver_estado(self, obj):
         colores = {1: '#4CAF50', 2: '#F44336', 3: '#FF9800'}
@@ -46,20 +53,11 @@ class NichoAdmin(admin.ModelAdmin):
         return format_html('<span style="color: #95a5a6;">N/A</span>')
     alerta_pago.short_description = "Finanzas"
 
-    # CORRECCIÓN AQUÍ: Cambié latitud/longitud por lat/lng
     def ir_al_mapa(self, obj):
         if obj.lat and obj.lng:
             return format_html('<a href="/mapa/?id={}" target="_blank" style="color: #2196F3; font-weight: bold;">📍 Ver Satélite</a>', obj.id)
         return format_html('<span style="color: #ccc;">Sin GPS</span>')
     ir_al_mapa.short_description = "Mapa"
-
-    def ver_qr(self, obj):
-        datos = f"Nicho:{obj.codigo}|DPI:{obj.dpi_propietario}"
-        qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={datos}"
-        return format_html('<a href="{}" target="_blank">📲 QR</a>', qr_url)
-    ver_qr.short_description = "QR"
-
-    def has_delete_permission(self, request, obj=None): return False
 
     def descargar_pdf(self, request, queryset):
         from django.shortcuts import redirect
@@ -70,31 +68,27 @@ class NichoAdmin(admin.ModelAdmin):
 
     def exportar_excel(self, request, queryset):
         response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="reporte_cementerio.csv"'
+        response['Content-Disposition'] = 'attachment; filename="RESPALDO_COORDENADAS.csv"'
         response.write(u'\ufeff'.encode('utf8'))
         writer = csv.writer(response)
-        writer.writerow(['Código', 'Dueño Legal', 'Difunto', 'Estado', 'Vencimiento'])
+        writer.writerow(['Código', 'Dueño', 'Difunto', 'Latitud', 'Longitud', 'Estado', 'Vencimiento'])
         for n in queryset:
             estado = "Disponible" if n.estado_id == 1 else "Ocupado"
-            writer.writerow([n.codigo, n.propietario, n.nombre_difunto, estado, n.fecha_vencimiento])
+            writer.writerow([n.codigo, n.propietario, n.nombre_difunto, n.lat, n.lng, estado, n.fecha_vencimiento])
         return response
-    exportar_excel.short_description = "📊 Exportar Excel"
+    exportar_excel.short_description = "📊 Respaldar datos y coordenadas (Excel)"
 
 @admin.register(FotoCampo)
 class FotoCampoAdmin(admin.ModelAdmin):
     list_display = ('nicho', 'miniatura')
     def miniatura(self, obj):
         if obj.imagen:
-            return format_html('<img src="{}" width="60" height="60" style="border-radius:5px; border:1px solid #ddd;" />', obj.imagen.url)
+            return format_html('<img src="{}" width="60" height="60" style="border-radius:5px;" />', obj.imagen.url)
         return "Sin foto"
-    miniatura.short_description = "Vista Previa"
 
 @admin.register(Exhumacion)
 class ExhumacionAdmin(admin.ModelAdmin):
     list_display = ('nicho', 'nombre_difunto_retirado', 'fecha_exhumacion', 'imprimir_acta')
-    list_filter = ('fecha_exhumacion',)
     search_fields = ('nombre_difunto_retirado', 'nicho__codigo')
-    def has_delete_permission(self, request, obj=None): return False
     def imprimir_acta(self, obj):
-        return format_html('<a style="background: #2196F3; color: white; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-weight: bold;" href="/exhumacion/pdf/{}/" target="_blank">📄 Ver Acta</a>', obj.id)
-    imprimir_acta.short_description = "Generar Acta"
+        return format_html('<a style="background: #2196F3; color: white; padding: 5px 10px; border-radius: 4px; text-decoration: none;" href="/exhumacion/pdf/{}/" target="_blank">📄 Ver Acta</a>', obj.id)

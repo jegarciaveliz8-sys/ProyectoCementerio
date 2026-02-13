@@ -71,6 +71,6 @@ MEDIA_ROOT = BASE_DIR / 'media'
 import os
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-ALLOWED_HOSTS = ['192.168.1.37', '192.168.1.39', '127.0.0.1', 'localhost', '*']
+ALLOWED_HOSTS = ['*']
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'

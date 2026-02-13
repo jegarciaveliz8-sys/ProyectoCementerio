@@ -14,7 +14,7 @@ LOGO_PATH = os.path.join(settings.BASE_DIR, 'registros', 'static', 'img', 'logo_
 
 def mapa_nichos(request):
     nicho_id = request.GET.get('id', 0) 
-    referencias = Nicho.objects.exclude(lat=0).exclude(lng=0).exclude(lat=14.78220)
+    referencias = Nicho.objects.exclude(lat=0).exclude(lng=0).exclude(lat=14.7822).exclude(lat=14.78220)
     hoy = timezone.now().date()
     listos_data = []
     
