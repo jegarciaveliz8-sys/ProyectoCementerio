@@ -5,6 +5,7 @@ from django.utils.html import format_html
 from django.http import HttpResponse
 from django.utils import timezone
 from .models import Nicho, FotoCampo, Exhumacion
+
 class FiltroUbicacion(admin.SimpleListFilter):
     title = "Estado de Ubicación"
     parameter_name = "ubicacion"
@@ -20,7 +21,6 @@ class FiltroUbicacion(admin.SimpleListFilter):
             return queryset.filter(lat=14.7822)
         return queryset
 
-
 class NichoAdminForm(forms.ModelForm):
     class Meta:
         model = Nicho
@@ -34,9 +34,6 @@ class NichoAdmin(admin.ModelAdmin):
     list_filter = (FiltroUbicacion, 'estado_id', 'fecha_vencimiento')
     actions = ['descargar_pdf', 'exportar_excel']
     
-    # Hemos quitado readonly_fields para que puedas corregir las coordenadas
-    # Hemos quitado has_delete_permission para que PUEDAS ELIMINAR
-
     def ver_estado(self, obj):
         colores = {1: '#4CAF50', 2: '#F44336', 3: '#FF9800'}
         nombres = {1: '✅ DISPONIBLE', 2: '⚰️ OCUPADO', 3: '📝 RESERVADO'}
@@ -48,15 +45,15 @@ class NichoAdmin(admin.ModelAdmin):
     def alerta_pago(self, obj):
         if obj.fecha_vencimiento:
             if obj.fecha_vencimiento < timezone.now().date():
-                return format_html('<span style="background: #e74c3c; color: white; padding: 3px 8px; border-radius: 4px; font-weight: bold;">🚨 DEUDA</span>')
-            return format_html('<span style="color: #27ae60; font-weight: bold;">✅ AL DÍA</span>')
-        return format_html('<span style="color: #95a5a6;">N/A</span>')
+                return format_html('<span style="background: #e74c3c; color: white; padding: 3px 8px; border-radius: 4px; font-weight: bold;">{}</span>', "🚨 DEUDA")
+            return format_html('<span style="color: #27ae60; font-weight: bold;">{}</span>', "✅ AL DÍA")
+        return format_html('<span style="color: #95a5a6;">{}</span>', "N/A")
     alerta_pago.short_description = "Finanzas"
 
     def ir_al_mapa(self, obj):
         if obj.lat and obj.lng:
             return format_html('<a href="/mapa/?id={}" target="_blank" style="color: #2196F3; font-weight: bold;">📍 Ver Satélite</a>', obj.id)
-        return format_html('<span style="color: #ccc;">Sin GPS</span>')
+        return format_html('<span style="color: #ccc;">{}</span>', "Sin GPS")
     ir_al_mapa.short_description = "Mapa"
 
     def descargar_pdf(self, request, queryset):
