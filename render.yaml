@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: proyectocementerio
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn ProyectoCementerio.wsgi:application
