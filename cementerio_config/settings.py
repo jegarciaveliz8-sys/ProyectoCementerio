@@ -1,4 +1,5 @@
 import os
+import dj_database_url
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -8,12 +9,14 @@ DEBUG = True
 ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
+    'cloudinary_storage',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'cloudinary',
     'whitenoise.runserver_nostatic',
     'registros',
 ]
@@ -50,10 +53,10 @@ TEMPLATES = [
 WSGI_APPLICATION = 'cementerio_config.wsgi.application'
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=os.environ.get('DATABASE_URL'),
+        conn_max_age=600
+    )
 }
 
 LANGUAGE_CODE = 'es-gt'
@@ -67,5 +70,11 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# CONFIGURACIÓN DE CLOUDINARY PARA FOTOS ETERNAS
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': 'dg8ze1v8g',
+    'API_KEY': '779673535231369',
+    'API_SECRET': 'nPd3_AaeIKTv5-h14i-RbhqIxNQ'
+}
+
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
