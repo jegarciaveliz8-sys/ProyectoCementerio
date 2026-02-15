@@ -52,7 +52,9 @@ class NichoAdmin(admin.ModelAdmin):
 
     def ir_al_mapa(self, obj):
         if obj.lat and obj.lng:
-            return format_html('<a href="/mapa/?id={}" target="_blank" style="color: #2196F3; font-weight: bold;">📍 Ver Satélite</a>', obj.id)
+            # Link mejorado: t=k (satélite) y z=20 (zoom máximo)
+            url = f"https://www.google.com/maps?q={obj.lat},{obj.lng}&t=k&z=20"
+            return format_html('<a href="{}" target="_blank" style="background: #2196F3; color: white; padding: 3px 10px; border-radius: 4px; text-decoration: none; font-weight: bold;">📍 Ver Satélite</a>', url)
         return format_html('<span style="color: #ccc;">{}</span>', "Sin GPS")
     ir_al_mapa.short_description = "Mapa"
 
