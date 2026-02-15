@@ -23,32 +23,28 @@ class FiltroUbicacion(admin.SimpleListFilter):
 
 @admin.register(Nicho)
 class NichoAdmin(admin.ModelAdmin):
-    # Definimos qué columnas ver y en qué orden
     list_display = ('codigo_con_espacio', 'propietario', 'nombre_difunto', 'lat_f', 'lng_f', 'ver_estado', 'alerta_pago', 'ir_al_mapa')
     search_fields = ('codigo', 'propietario', 'nombre_difunto')
     list_filter = (FiltroUbicacion, 'estado_id', 'fecha_vencimiento')
 
-    # 1. Separar el código para que no se pegue a la latitud
     def codigo_con_espacio(self, obj):
-        return format_html('<div style="min-width: 150px; font-weight: bold;">{}</div>', obj.codigo)
+        return format_html('<div style="min-width: 120px; font-weight: bold;">{}</div>', obj.codigo)
     codigo_con_espacio.short_description = "Código"
 
-    # 2. Formatear Latitud con menos decimales para que quepa
     def lat_f(self, obj):
         return f"{obj.lat:.6f}" if obj.lat else "-"
     lat_f.short_description = "Lat"
 
-    # 3. Formatear Longitud
     def lng_f(self, obj):
         return f"{obj.lng:.6f}" if obj.lng else "-"
     lng_f.short_description = "Lng"
 
-    # 4. Botón del Mapa mejorado
+    # AQUÍ ESTÁ LA CORRECCIÓN DEL MAPA SATELITAL
     def ir_al_mapa(self, obj):
         if obj.lat and obj.lng:
-            # Enlace directo a Google Maps con zoom alto (z=20) y vista satélite (t=k)
-            url = f"https://www.google.com/maps?q={obj.lat},{obj.lng}&t=k&z=20"
-            return format_html('<a href="{}" target="_blank" style="background: #2196F3; color: white; padding: 4px 8px; border-radius: 4px; text-decoration: none; font-weight: bold;">📍 Mapa</a>', url)
+            # Nueva URL corregida: t=k activa satélite, z=20 es el zoom
+            url = f"https://www.google.com/maps/search/?api=1&query={obj.lat},{obj.lng}&t=k&z=20"
+            return format_html('<a href="{}" target="_blank" style="background: #2196F3; color: white; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-weight: bold;">🛰️ Ver Satélite</a>', url)
         return "Sin GPS"
     ir_al_mapa.short_description = "Mapa"
 
