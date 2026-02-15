@@ -9,15 +9,15 @@ DEBUG = True
 ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
-    'cloudinary_storage',
+    'whitenoise.runserver_nostatic',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'cloudinary_storage',
     'cloudinary',
-    'whitenoise.runserver_nostatic',
     'registros',
 ]
 
@@ -67,12 +67,12 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# Cambio a una versión más compatible para evitar el "punto trabado"
+# WhiteNoise maneja el diseño (CSS/JS)
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# CONFIGURACIÓN DE CLOUDINARY PARA FOTOS ETERNAS
+# Cloudinary SOLO para fotos subidas
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': 'dg8ze1v8g',
     'API_KEY': '779673535231369',
@@ -81,5 +81,4 @@ CLOUDINARY_STORAGE = {
 
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
-# VITAL: Esto permite que el Admin de Django cargue correctamente en Render
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
