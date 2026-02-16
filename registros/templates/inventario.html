@@ -1,95 +1,54 @@
 {% extends 'base.html' %}
 {% block content %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<style>
-    #map { height: 85vh; width: 100%; background: #eee; }
-    .panel-flotante {
-        position: absolute; top: 100px; right: 20px; z-index: 1000;
-        background: white; padding: 15px; border-radius: 10px; width: 280px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.3); font-family: Arial;
-    }
-    .btn-blue { background: #007bff; color: white; border: none; padding: 10px; width: 100%; cursor: pointer; border-radius: 5px; font-weight: bold; margin-top: 10px;}
-</style>
-
-<div id="map"></div>
-
-<div class="panel-flotante">
-    <h4 style="margin:0 0 10px 0;">🏗️ GESTIÓN DE NICHOS</h4>
-    <input type="text" id="buscador" placeholder="Serie (Ej: D5-5)" style="width:90%; padding:8px;">
-    <button class="btn-blue" onclick="traerNichos()">TRAER AL MAPA</button>
-    <div style="margin-top:15px; padding:10px; background:#e3f2fd; border:1px solid #90caf9; border-radius:5px;">
-        <b>📊 AVANCE REAL:</b><br>
-        <span id="txt-conteo" style="font-size: 1.2em; font-weight: bold;">Cargando...</span>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-9">
+            <div id="map" style="height: 85vh; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);"></div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-3 shadow-sm">
+                <h5>📍 Reubicación</h5>
+                <p class="small text-muted">Arrastre el marcador azul para mover el nicho y dele a "Guardar".</p>
+                <hr>
+                <div id="info-nicho">
+                    <p>Seleccione un nicho del listado o del mapa.</p>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
 <script>
-    var map = L.map('map').setView([14.78227, -90.2045], 19);
-    L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 22 }).addTo(map);
+    // Configuración inicial del cementerio
+    var map = L.map('map').setView([14.7814, -90.2024], 18);
+    L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+        attribution: 'Google Satellite'
+    }).addTo(map);
 
-    // CARGA DE DATOS SEGURA
-    var todosLosNichos = {{ nichos_json|safe }};
+    // Iconos para diferenciar estados
+    var iconVerde = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', shadowSize: [41, 41], iconSize: [25, 41], iconAnchor: [12, 41] });
+    var iconRojo = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', shadowSize: [41, 41], iconSize: [25, 41], iconAnchor: [12, 41] });
 
-    function inicializarMapa() {
-        if (!todosLosNichos || todosLosNichos.length === 0) {
-            document.getElementById('txt-conteo').innerHTML = "Error: Sin datos";
-            return;
-        }
-
-        var movidos = 0;
-        todosLosNichos.forEach(n => {
-            // Si tiene coordenadas reales, poner punto azul
-            if (n.la != 0 && n.la != 14.78227 && n.la != null) {
-                L.circleMarker([n.la, n.lo], {
-                    radius: 3, fillColor: "#007bff", color: "#fff", weight: 1, opacity: 1, fillOpacity: 0.8
-                }).addTo(map).bindPopup("<b>Nicho:</b> " + n.co + "<br><b>Lat:</b> " + n.la + "<br><b>Lng:</b> " + n.lo);
-                movidos++;
-            }
-        });
-        document.getElementById('txt-conteo').innerHTML = "Registrados: " + movidos + "<hr><div style='font-size:0.85em; line-height:1.2;'>" +
-        "<b>FALTAN POR UBICAR:</b><br>" +
-        "A: " + (todosLosNichos.filter(x=>x.co.startsWith('A')).length - todosLosNichos.filter(x=>x.co.startsWith('A') && x.la != 0 && x.la != 14.78227).length) + "<br>" +
-        "B: " + (todosLosNichos.filter(x=>x.co.startsWith('B')).length - todosLosNichos.filter(x=>x.co.startsWith('B') && x.la != 0 && x.la != 14.78227).length) + "<br>" +
-        "C: " + (todosLosNichos.filter(x=>x.co.startsWith('C')).length - todosLosNichos.filter(x=>x.co.startsWith('C') && x.la != 0 && x.la != 14.78227).length) + "<br>" +
-        "D: " + (todosLosNichos.filter(x=>x.co.startsWith('D')).length - todosLosNichos.filter(x=>x.co.startsWith('D') && x.la != 0 && x.la != 14.78227).length) + "</div>";
-    }
-
-    function traerNichos() {
-        var busqueda = document.getElementById('buscador').value.toUpperCase();
-        var encontrados = todosLosNichos.filter(n => n.co.includes(busqueda) && (n.la == 0 || n.la == 14.78227)).slice(0, 30);
-        
-        encontrados.forEach(n => {
-            var centro = map.getCenter();
-            var marker = L.marker([centro.lat, centro.lng], {draggable: true}).addTo(map);
-            marker.bindPopup("<b>Mover:</b> " + n.co).openPopup();
-            marker.on('dragend', function(e) {
-                var p = e.target.getLatLng();
-                guardar(n.co, p.lat, p.lng);
-            });
-        });
-    }
-
-    function guardar(codigo, lat, lng) {
-        var fd = new FormData();
-        fd.append('inicio', codigo); fd.append('lat', lat); fd.append('lng', lng);
-        fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
-        fetch('/actualizar-posicion-bloque-simple/', { method: 'POST', body: fd })
-        .then(r => { 
-            if(r.ok) {
-                // Convertir la gota en punto azul tras guardar
-                L.circleMarker([lat, lng], { radius: 4, fillColor: "green", color: "#fff", weight: 1, fillOpacity: 1 }).addTo(map);
-                // Actualizar dato local
-                var nicho = todosLosNichos.find(x => x.co == codigo);
-                if(nicho) { nicho.la = lat; nicho.lo = lng; }
+    // Aquí está el truco: Cargamos los nichos limpiando las comas
+    {% for n in nichos %}
+        (function() {
+            // Convertimos comas a puntos para que JS no se trabe
+            var lat = parseFloat("{{ n.lat }}".replace(',', '.'));
+            var lng = parseFloat("{{ n.lng }}".replace(',', '.'));
+            
+            // FILTRO: Si es la coordenada de reserva (la torre), NO lo dibujamos para no saturar
+            // Solo dibujamos los que ya tienen coordenadas distintas a la base 14.781402
+            if (lat !== 14.781402) {
+                var m = L.marker([lat, lng], {
+                    icon: "{{ n.estado_id }}" == "1" ? iconVerde : iconRojo
+                }).addTo(map);
                 
-                // Actualizar número del contador
-                var totalMovidos = todosLosNichos.filter(n => n.la != 0 && n.la != 14.78227).length;
-                document.getElementById('txt-conteo').innerHTML = "Registrados: " + totalMovidos;
+                m.bindPopup("<b>Código: {{ n.codigo }}</b><br>Estado: {{ n.get_estado_id_display }}");
             }
-        });
-    }
-
-    inicializarMapa();
+        })();
+    {% endfor %}
 </script>
 {% endblock %}
