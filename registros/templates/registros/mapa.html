@@ -29,6 +29,7 @@
 
     <script>
         var map = L.map('map').setView([14.78225, -90.20425], 19);
+function buscarNicho(codigo) { var n = nichos.find(x => x.codigo === codigo); if(n && n.lat != 0) { map.flyTo([n.lat, n.lng], 20); } else { alert("Nicho no encontrado o sin coordenadas"); } }
         L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', { 
             maxZoom: 22, 
             subdomains:['mt0','mt1','mt2','mt3'] 
@@ -42,7 +43,7 @@
             lista.innerHTML = '';
             let filtro = document.getElementById('bus').value.toUpperCase();
             
-            nichos.filter(n => n.codigo.includes(filtro)).slice(0, 50).forEach(n => {
+            nichos.filter(n => n.codigo.includes(filtro)).forEach(n => {
                 let div = document.createElement('div');
                 let estaUbicado = n.lat != 0 && n.lat != null;
                 
@@ -95,7 +96,12 @@
             });
         });
 
-        function filtrar() { dibujar(); }
+        function filtrar() { 
+    dibujar(); 
+    let filtro = document.getElementById("bus").value.toUpperCase(); 
+    let n = nichos.find(x => x.codigo === filtro); 
+    if(n && n.lat != 0) { map.flyTo([n.lat, n.lng], 21); } 
+}
         dibujar();
     </script>
 </body>
