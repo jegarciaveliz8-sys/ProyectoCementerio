@@ -1,8 +1,15 @@
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from simple_history.models import HistoricalRecords
+import qrcode
+from io import BytesIO
+from django.core.files import File
+from django.utils import timezone
+from PIL import Image
 
 class Nicho(models.Model):
+    history = HistoricalRecords()
     codigo = models.CharField(max_length=50, unique=True)
     lat = models.FloatField()
     lng = models.FloatField()
@@ -14,9 +21,33 @@ class Nicho(models.Model):
     telefono_contacto = models.CharField(max_length=20, blank=True, null=True, verbose_name="Teléfono")
     observaciones = models.TextField(blank=True, null=True, verbose_name="Notas de Propiedad")
     foto = models.ImageField(upload_to='nichos/', blank=True, null=True, verbose_name='Foto del Nicho')
+    qr_code = models.ImageField(upload_to='qrcodes/', blank=True, null=True, editable=False)
     fecha_pago = models.DateField(blank=True, null=True, verbose_name='Fecha de Último Pago')
     fecha_vencimiento = models.DateField(blank=True, null=True, verbose_name='Fecha de Vencimiento')
     monto_arbitrio = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, verbose_name='Monto de Arbitrio (Q)')
+
+    @property
+    def esta_vencido(self):
+        if self.fecha_vencimiento:
+            return self.fecha_vencimiento < timezone.now().date()
+        return False
+
+    def save(self, *args, **kwargs):
+        # Generar QR
+        qr = qrcode.QRCode(version=1, box_size=10, border=5)
+        url_publica = f"http://192.168.1.39:8050/nicho/{self.codigo}/"
+        qr.add_data(url_publica)
+        qr.make(fit=True)
+        
+        qr_image = qr.make_image(fill_color="black", back_color="white").convert('RGB')
+        
+        fname = f'qr-{self.codigo}.png'
+        buffer = BytesIO()
+        qr_image.save(buffer, 'PNG')
+        self.qr_code.save(fname, File(buffer), save=False)
+        qr_image.close()
+        
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.codigo} - {self.propietario if self.propietario else 'Sin Dueño'}"
@@ -49,11 +80,10 @@ class Exhumacion(models.Model):
     def __str__(self):
         return f"Exhumación {self.nicho.codigo} - {self.fecha_exhumacion}"
 
-# --- SENSOR AUTOMÁTICO (SIGNAL) ---
 @receiver(post_save, sender=Exhumacion)
 def limpiar_nicho_tras_exhumacion(sender, instance, created, **kwargs):
-    if created: # Solo si es una exhumación nueva
+    if created:
         nicho = instance.nicho
-        nicho.estado_id = 1  # 1 = Disponible
-        nicho.nombre_difunto = "" # Limpiamos el nombre
+        nicho.estado_id = 1
+        nicho.nombre_difunto = ""
         nicho.save()

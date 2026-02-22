@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ficha Digital - {{ nicho.codigo }}</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; color: #1c1e21; }
+        .card { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.15); max-width: 400px; margin: 0 auto; }
+        .header { background: #1e3a8a; color: white; padding: 20px; text-align: center; }
+        .content { padding: 25px; text-align: center; }
+        .foto-container { width: 100%; height: 250px; background: #e5e7eb; overflow: hidden; position: relative; }
+        .foto { width: 100%; height: 100%; object-fit: cover; }
+        .nombre { font-size: 26px; font-weight: bold; margin: 10px 0; color: #1e3a8a; line-height: 1.2; }
+        .info { font-size: 16px; margin: 8px 0; color: #4b5563; }
+        .divider { border: 0; border-top: 1px solid #eee; margin: 20px 0; }
+        
+        .btn-whatsapp { 
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            background: #25d366; color: white; text-decoration: none; 
+            padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px;
+            margin-top: 25px; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+            transition: transform 0.2s;
+        }
+        .btn-whatsapp:active { transform: scale(0.98); }
+        
+        .footer { padding: 20px; font-size: 13px; color: #9ca3af; text-align: center; background: #f9fafb; border-top: 1px solid #f1f1f1; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="foto-container">
+            {% if nicho.foto %}
+                <img src="{{ nicho.foto.url }}" class="foto" alt="Foto del nicho">
+            {% else %}
+                <div style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #9ca3af;">
+                    <svg width="50" height="50" fill="currentColor" viewBox="0 0 24 24"><path d="M19 7h-3V6a3 3 0 0 0-3-3h-2a3 3 0 0 0-3 3v1H5a3 3 0 0 0-3 3v11a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V10a3 3 0 0 0-3-3zm-9-1a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1h-4V6zm10 15a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V10a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v11z"/></svg>
+                    <p style="margin-top:10px;">Sin foto registrada</p>
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="header">
+            <h2 style="margin:0; font-size: 18px; text-transform: uppercase; letter-spacing: 1px;">Nicho: {{ nicho.codigo }}</h2>
+        </div>
+        
+        <div class="content">
+            {% if nicho.nombre_difunto %}
+                <div class="nombre">{{ nicho.nombre_difunto }}</div>
+                <div class="info">Descansa en Paz</div>
+            {% else %}
+                <div class="nombre" style="color: #10b981;">Disponible</div>
+                <div class="info">Espacio listo para asignación</div>
+            {% endif %}
+            
+            <div class="divider"></div>
+            
+            <div class="info"><strong>📍 Sector:</strong> {{ nicho.codigo|slice:":1" }}</div>
+            <div class="info"><strong>📅 Vencimiento:</strong> {{ nicho.fecha_vencimiento|default:"Vigente" }}</div>
+
+            <a href="https://wa.me/50255434770?text=Hola,%20solicito%20información%20del%20nicho%20{{ nicho.codigo }}%20a%20nombre%20de%20{{ nicho.nombre_difunto|default:'Disponible' }}" class="btn-whatsapp" target="_blank">
+                <svg width="20" height="20" fill="white" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.438 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.89 4.44-9.892 9.886 0 2.125.597 3.856 1.548 5.497l-.947 3.454 3.456-.947zm11.238-7.534c-.09-.15-.332-.24-.708-.427-.375-.188-2.221-1.096-2.566-1.221-.345-.125-.597-.188-.85.188-.252.375-.975 1.221-1.196 1.471-.221.25-.443.281-.819.094-.375-.188-1.584-.584-3.017-1.862-1.115-.994-1.867-2.223-2.086-2.599-.219-.375-.023-.578.165-.765.17-.168.375-.438.563-.656.188-.219.25-.375.375-.625.125-.25.063-.469-.03-.656-.094-.188-.85-2.049-1.166-2.812-.308-.742-.622-.641-.851-.653-.221-.012-.473-.013-.726-.013s-.664.094-1.012.469c-.349.375-1.328 1.297-1.328 3.156 0 1.859 1.354 3.656 1.541 3.906.188.25 2.664 4.068 6.453 5.703.901.388 1.604.62 2.153.795.905.287 1.728.246 2.379.15.726-.107 2.221-.907 2.536-1.782.314-.875.314-1.625.221-1.781z"/></svg>
+                Contactar a la Muni
+            </a>
+        </div>
+        
+        <div class="footer">
+            Municipalidad de Sanarate<br>
+            <strong>Gestión Digital</strong>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ficha Muni Sanarate</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg">
+        <div class="bg-blue-900 p-6 text-center text-white">
+            <h1 class="text-xl font-bold uppercase">Municipalidad de Sanarate</h1>
+            <p class="text-xs opacity-75">Control de Cementerios</p>
+        </div>
+
+        <div class="p-4">
+            {% if nicho.fecha_vencimiento %}
+                {% if nicho.esta_vencido %}
+                    <div class="bg-red-600 text-white p-4 rounded-lg mb-4 shadow-md text-center">
+                        <p class="font-black text-lg">⚠️ PENDIENTE DE PAGO</p>
+                        <p class="text-xs">Este nicho presenta mora. Favor regularizar en Tesorería.</p>
+                    </div>
+                {% else %}
+                    <div class="bg-green-600 text-white p-4 rounded-lg mb-4 shadow-md text-center">
+                        <p class="font-black text-lg">✅ ESTADO: AL DÍA</p>
+                        <p class="text-xs">Título vigente y sin pagos pendientes.</p>
+                    </div>
+                {% endif %}
+            {% endif %}
+
+            <div class="border-2 border-blue-900 rounded-xl p-5 bg-blue-50">
+                <p class="text-[10px] font-bold text-blue-900 uppercase tracking-widest">Código del Nicho</p>
+                <p class="text-3xl font-black text-gray-900 mb-4">{{ nicho.codigo }}</p>
+
+                <p class="text-[10px] font-bold text-gray-500 uppercase">Fallecido</p>
+                <p class="text-xl font-bold text-gray-800 mb-4">{{ nicho.nombre_difunto|default:"Dato no registrado" }}</p>
+
+                <p class="text-[10px] font-bold text-gray-500 uppercase">Vencimiento del Título</p>
+                <p class="text-lg font-bold text-gray-700">{{ nicho.fecha_vencimiento|date:"d/m/Y"|default:"Pendiente" }}</p>
+            </div>
+
+            <a href="https://wa.me/502XXXXXXXX?text=Informacion%20nicho%20{{ nicho.codigo }}" 
+               class="block mt-6 bg-green-500 text-white text-center py-4 rounded-xl font-bold shadow-lg">
+                Enviar mensaje a la Muni
+            </a>
+        </div>
+    </div>
+</body>
+</html>
