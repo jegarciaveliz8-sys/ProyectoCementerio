@@ -19,6 +19,8 @@ INSTALLED_APPS = [
     'cloudinary_storage',
     'cloudinary',
     'registros',
+    'import_export',
+    'rangefilter',
 ]
 
 MIDDLEWARE = [

@@ -1,4 +1,6 @@
 from django.contrib import admin
+from import_export.admin import ImportExportModelAdmin
+from rangefilter.filters import DateRangeFilter
 from django.utils.html import format_html
 from .models import Nicho, FotoCampo, Exhumacion
 
@@ -13,11 +15,12 @@ class FiltroUbicacion(admin.SimpleListFilter):
         return queryset
 
 @admin.register(Nicho)
-class NichoAdmin(admin.ModelAdmin):
+class NichoAdmin(ImportExportModelAdmin):
+    list_display_links = ('codigo',)
     # 'antorcha' es la columna con el ícono rojo
-    list_display = ('antorcha', 'codigo', 'lat', 'lng', 'ver_estado')
-    list_filter = (FiltroUbicacion, 'estado_id', 'fecha_vencimiento')
-    search_fields = ('codigo', 'propietario')
+    list_display = ('antorcha', 'codigo', 'nombre_difunto', 'propietario', 'ver_estado')
+    list_filter = (FiltroUbicacion, 'estado_id', ('fecha_vencimiento', DateRangeFilter))
+    search_fields = ('codigo', 'propietario', 'nombre_difunto')
 
     def antorcha(self, obj):
         if obj.lat and obj.lng:
@@ -43,6 +46,11 @@ class NichoAdmin(admin.ModelAdmin):
         nombre = {1: '✅ DISPONIBLE', 2: '⚰️ OCUPADO', 3: '📝 RESERVADO'}.get(obj.estado_id, '...')
         return format_html('<b style="color: {};">{}</b>', color, nombre)
     ver_estado.short_description = "Estado"
+ 
+    def get_readonly_fields(self, request, obj=None):
+        if obj and obj.lat and obj.lng:
+            return ('codigo', 'lat', 'lng')
+        return ()
 
 admin.site.register(FotoCampo)
 admin.site.register(Exhumacion)
