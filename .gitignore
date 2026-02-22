@@ -9,3 +9,5 @@ venv_cementerio/
 .DS_Store
 staticfiles/
 registros/__pycache__/
+*.sqlite3
+*.json
