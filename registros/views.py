@@ -1,6 +1,6 @@
 from django.db import models
 from django.db.models import Q
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
@@ -10,6 +10,7 @@ import json
 def dashboard_stats(request):
     hoy = timezone.now().date()
     total = Nicho.objects.count()
+    # Usamos nombres de estado o IDs según tu modelo, asumiendo estado_id
     ocupados = Nicho.objects.filter(estado_id=2).count()
     disponibles = Nicho.objects.filter(estado_id=1).count()
     vencidos = Nicho.objects.filter(estado_id=2, fecha_vencimiento__lt=hoy).count()
@@ -71,17 +72,30 @@ def buscar_nicho_json(request):
 
 def generar_titulo_pdf(request, nicho_id):
     nicho = get_object_or_404(Nicho, id=nicho_id)
-    return HttpResponse(f"<h1>Título de Propiedad - Sanarate</h1><p>Nicho: {nicho.codigo}</p>")
+    return render(request, 'registros/titulo_formal.html', {'nicho': nicho})
 
 def detalle_nicho_publico(request, codigo):
     nicho = get_object_or_404(Nicho, codigo=codigo)
     return render(request, 'registros/ficha_publica.html', {'nicho': nicho})
 
 def buscador_nichos(request):
-    query = request.GET.get('q', '')
-    resultados = None
+    query = request.GET.get('q', '').strip()
+    error = None
     if query:
+        # Intentar búsqueda exacta primero (ideal para QR o códigos directos)
+        nicho_exacto = Nicho.objects.filter(codigo__iexact=query).first()
+        if nicho_exacto:
+            return redirect('detalle_nicho_publico', codigo=nicho_exacto.codigo)
+        
+        # Si no es exacto, buscar coincidencias
         resultados = Nicho.objects.filter(
             Q(codigo__icontains=query) | Q(nombre_difunto__icontains=query)
         )[:20]
-    return render(request, 'registros/buscador.html', {'resultados': resultados, 'query': query})
+        
+        if not resultados:
+            error = "No se encontró ningún nicho con ese código o nombre."
+            return render(request, 'registros/buscador.html', {'error': error, 'query': query})
+            
+        return render(request, 'registros/buscador.html', {'resultados': resultados, 'query': query})
+        
+    return render(request, 'registros/buscador.html')

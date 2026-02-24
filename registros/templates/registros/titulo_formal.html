@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Título Legal - Sanarate</title>
+    <style>
+        @media print { .no-print { display: none; } body { background: white; padding: 0; } }
+        body { font-family: 'Times New Roman', serif; background: #555; display: flex; justify-content: center; padding: 20px; }
+        
+        .certificado {
+            background: white;
+            width: 8.5in;
+            height: 11in;
+            padding: 60px;
+            box-sizing: border-box;
+            border: 20px solid #2c3e50;
+            outline: 5px double #8b6b23;
+            outline-offset: -15px;
+            position: relative;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+        }
+
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 80px;
+            color: rgba(0,0,0,0.03);
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .header { text-align: center; border-bottom: 3px solid #8b6b23; padding-bottom: 10px; margin-bottom: 25px; }
+        .header h1 { margin: 0; font-size: 28px; letter-spacing: 2px; color: #1a1a1a; }
+        
+        .num-titulo { position: absolute; top: 65px; right: 65px; color: #d32f2f; font-weight: bold; font-family: 'Courier New'; font-size: 18px; }
+
+        .cuerpo { font-size: 18px; line-height: 1.8; text-align: justify; z-index: 1; position: relative; color: #222; }
+        
+        .info-box { 
+            background: rgba(245, 245, 245, 0.9); 
+            border: 1px solid #b8860b; 
+            padding: 25px; 
+            margin: 25px 0; 
+            display: grid; 
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            border-radius: 5px;
+        }
+
+        /* AJUSTE DEL QR: Se subió significativamente (150px) para separarlo del fondo */
+        .qr-validacion {
+            position: absolute;
+            bottom: 150px; 
+            right: 80px;  
+            text-align: center;
+        }
+
+        .footer-firmas { 
+            margin-top: 130px; 
+            display: flex; 
+            justify-content: space-around; 
+            text-align: center;
+        }
+
+        .firma-linea { border-top: 2px solid #000; width: 240px; padding-top: 10px; font-weight: bold; font-size: 13px; text-transform: uppercase; }
+        
+        .hash-seguridad { 
+            position: absolute; 
+            bottom: 20px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            font-family: 'Courier New'; 
+            font-size: 10px; 
+            color: #888; 
+        }
+    </style>
+</head>
+<body>
+
+<div class="no-print" style="position: fixed; left: 20px; top: 20px; z-index: 100;">
+    <button onclick="window.print()" style="padding: 15px 25px; background: #27ae60; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-size: 16px;">🖨️ IMPRIMIR TÍTULO MUNICIPAL</button>
+</div>
+
+<div class="certificado">
+    <div class="watermark">PROPIEDAD MUNICIPAL</div>
+    
+    <div class="num-titulo">No. {{ nicho.id|add:1000 }}</div>
+
+    <div class="header">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/0/0a/Escudo_de_Guatemala.svg" style="width: 90px; margin-bottom: 10px;" alt="Escudo">
+        <h1>MUNICIPALIDAD DE SANARATE</h1>
+        <h3 style="margin: 0; color: #8b6b23; text-transform: uppercase;">El Progreso, Guatemala, C.A.</h3>
+        <p style="font-weight: bold; margin-top: 10px; font-size: 14px;">REGISTRO Y CONTROL DE CEMENTERIOS</p>
+    </div>
+
+    <div class="cuerpo">
+        <p>EL INFRASCRITO SECRETARIO MUNICIPAL DEL MUNICIPIO DE SANARATE, DEL DEPARTAMENTO DE EL PROGRESO, <strong>CERTIFICA:</strong></p>
+        <p>Que de conformidad con los registros vigentes de la administración de servicios públicos, se hace constar que el interesado ha cumplido con los cánones legales y el pago de arbitrios de ley, otorgándosele el derecho de perpetuidad sobre el siguiente bien inmueble:</p>
+    </div>
+
+    <div class="info-box">
+        <div><strong>CÓDIGO DEL NICHO:</strong><br> <span style="font-size: 22px; color: #d32f2f; font-weight: 900;">{{ nicho.codigo }}</span></div>
+        <div><strong>SECTOR CATASTRAL:</strong><br> {{ nicho.codigo.0 }}</div>
+        <div><strong>PROPIETARIO LEGAL:</strong><br> {{ nicho.propietario|upper }}</div>
+        <div><strong>DPI / IDENTIFICACIÓN:</strong><br> {{ nicho.dpi_propietario|default:"---" }}</div>
+        <div><strong>FECHA DE EMISIÓN:</strong><br> 23 de febrero de 2026</div>
+        <div><strong>VENCIMIENTO:</strong><br> <span style="color: #27ae60;">{{ nicho.fecha_vencimiento|date:"d/m/Y"|default:"PAGO PERPETUO" }}</span></div>
+    </div>
+
+    <div class="cuerpo">
+        <p>Y para los usos legales que al interesado convengan, se extiende el presente Título Oficial en el Municipio de Sanarate, a los veintitrés días del mes de febrero del año dos mil veintiséis.</p>
+    </div>
+
+    <div class="footer-firmas">
+        <div class="firma-linea">
+            ALCALDE MUNICIPAL<br>
+            <span style="font-size: 10px; font-weight: normal;">ADMINISTRACIÓN 2024-2028</span>
+        </div>
+        <div class="firma-linea">
+            SECRETARIO MUNICIPAL<br>
+            <span style="font-size: 10px; font-weight: normal;">SELLO DE SECRETARÍA</span>
+        </div>
+    </div>
+
+    <div class="qr-validacion">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=http://uninferentially-fibrillar-ward.ngrok-free.dev/nicho/{{ nicho.codigo }}/" alt="QR">
+        <p style="font-size: 10px; margin-top: 5px; font-weight: bold;">VALIDACIÓN<br>ELECTRÓNICA</p>
+    </div>
+
+    <div class="hash-seguridad">
+        DOCUMENTO ELECTRÓNICO GENERADO POR PROYECTO CEMENTERIO SANARATE - HASH: {{ nicho.codigo|slice:":2" }}-{{ nicho.id }}
+    </div>
+</div>
+
+</body>
+</html>

@@ -5,7 +5,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-presentacion-sanarate-2026'
 DEBUG = True
 
-# Permite que entren desde cualquier IP de la red local
 ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
@@ -56,7 +55,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'cementerio_config.wsgi.application'
 
-# BASE DE DATOS LOCAL (Se guarda en el archivo db.sqlite3 de tu carpeta)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -71,13 +69,10 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
-
-# Manejo de archivos estáticos local
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Cloudinary para fotos (Se mantiene igual)
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': 'dg8ze1v8g',
     'API_KEY': '779673535231369',
@@ -85,3 +80,12 @@ CLOUDINARY_STORAGE = {
 }
 
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
+# CONFIGURACIÓN DE SEGURIDAD PARA NGROK (CORREGIDA)
+X_FRAME_OPTIONS = 'DENY'
+CSRF_TRUSTED_ORIGINS = [
+    'https://uninferentially-fibrillar-ward.ngrok-free.dev',
+    'https://*.ngrok-free.app',
+    'https://*.ngrok-free.dev',
+    'https://*.ngrok.io'
+]
