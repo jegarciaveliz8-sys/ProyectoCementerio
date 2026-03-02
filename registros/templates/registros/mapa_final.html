@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Mapa Alta Definición - Sanarate</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; }
+        #map { height: 100vh; width: 100vw; background: #000; }
+        .info-panel { 
+            position: absolute; top: 10px; left: 10px; z-index: 1000; 
+            background: rgba(0, 0, 0, 0.85); color: white; padding: 15px; 
+            border-radius: 8px; font-family: Arial, sans-serif; border: 2px solid #2196F3;
+        }
+        .nicho-popup { font-size: 14px; color: #333; min-width: 150px; }
+    </style>
+</head>
+<body>
+    <div class="info-panel">
+        <h3 style="margin:0; color: #2196F3;">🛰️ HD SANARATE</h3>
+        <p>Nichos: <b>{{ nichos.count }}</b></p>
+        <input type="text" id="busc_codigo" placeholder="Código..." style="padding:5px; width:100px; border-radius:3px; border:none;">
+        <button onclick="buscarNicho()" style="padding:5px; background:#2196F3; color:white; border:none; border-radius:3px; cursor:pointer;">🔍</button>
+        <p style="font-size:10px; margin-top:10px;">Usa el scroll para ver los nichos de cerca</p>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Capa de Google Satélite (Mucho más nítida para ver estructuras)
+        var googleSat = L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{
+            maxZoom: 21,
+            subdomains:['mt0','mt1','mt2','mt3']
+        });
+
+        var map = L.map('map', {
+            center: [14.7826, -90.2045],
+            zoom: 19,
+            layers: [googleSat]
+        });
+
+        var markers = {};
+
+        {% for n in nichos %}
+            {% if n.lat and n.lng %}
+                (function() {
+                    var lat = parseFloat("{{ n.lat|stringformat:'.15f' }}".replace(',', '.'));
+                    var lng = parseFloat("{{ n.lng|stringformat:'.15f' }}".replace(',', '.'));
+                    var cod = "{{ n.codigo }}";
+                    
+                    // Círculos más pequeños y transparentes para que dejen ver el nicho abajo
+                    var m = L.circleMarker([lat, lng], {
+                        radius: 3,
+                        fillColor: "#00ecff", // Celeste neón
+                        color: "#fff",
+                        weight: 0.5,
+                        opacity: 0.5,
+                        fillOpacity: 0.7
+                    }).addTo(map);
+
+                    m.bindPopup(`
+                        <div class="nicho-popup">
+                            <b>🏛️ Nicho: ${cod}</b><hr>
+                            👤 <b>Dueño:</b> {{ n.propietario|default:'SIN REGISTRO' }}<br>
+                            ⚰️ <b>Difunto:</b> {{ n.nombre_difunto|default:'RESERVA' }}
+                        </div>
+                    `);
+                    
+                    markers[cod] = m;
+                })();
+            {% endif %}
+        {% endfor %}
+
+        function buscarNicho() {
+            var code = document.getElementById('busc_codigo').value.toUpperCase();
+            if (markers[code]) {
+                map.setView(markers[code].getLatLng(), 20);
+                markers[code].openPopup();
+            }
+        }
+    </script>
+</body>
+</html>

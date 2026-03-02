@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mapa GIS | Sanarate</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { margin: 0; padding: 0; background: #222; }
+        #map { height: 100vh; width: 100vw; }
+        .info-bar { 
+            position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+            z-index: 1000; background: #1e3a8a; color: white;
+            padding: 10px 25px; border-radius: 50px; font-family: sans-serif;
+            font-size: 14px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            border: 2px solid white;
+        }
+    </style>
+</head>
+<body>
+    <div class="info-bar">🏛️ MUNICIPALIDAD DE SANARATE: CONTROL SATELITAL</div>
+    <div id="map"></div>
+
+    <script>
+        // 1. Iniciamos el mapa
+        var map = L.map('map', {
+            maxZoom: 18, // LIMITAMOS EL ZOOM PARA QUE NO SALGA EL ERROR
+            minZoom: 5
+        }).setView([14.7828, -90.2048], 16);
+
+        // 2. CAPA SATELITAL ROBUSTA (Google Hybrid alternativo)
+        var googleSat = L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{
+            subdomains:['mt0','mt1','mt2','mt3'],
+            attribution: 'Google Maps'
+        }).addTo(map);
+
+        // 3. Grupo de puntos
+        var markers = L.featureGroup();
+
+        {% for nicho in nichos %}
+            {% if nicho.lat and nicho.lng %}
+                var colorPunto = "#2ecc71"; // Verde por defecto
+                
+                var dot = L.circleMarker([{{ nicho.lat }}, {{ nicho.lng }}], {
+                    radius: 7,
+                    fillColor: colorPunto,
+                    color: "white",
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.9
+                }).bindPopup("<b>Nicho:</b> {{ nicho.codigo }}<br><b>Difunto:</b> {{ nicho.nombre_difunto }}");
+                
+                markers.addLayer(dot);
+            {% endif %}
+        {% endfor %}
+
+        markers.addTo(map);
+
+        // 4. AUTO-ENFOQUE
+        if (markers.getLayers().length > 0) {
+            map.fitBounds(markers.getBounds(), { padding: [40, 40] });
+        }
+    </script>
+</body>
+</html>
