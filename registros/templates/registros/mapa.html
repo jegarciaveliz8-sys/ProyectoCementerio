@@ -4,12 +4,15 @@
     <title>S.I.T. SANARATE - RADAR GEOGRÁFICO</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+
     <style>
         body { margin: 0; padding: 0; font-family: 'Open Sans', sans-serif; }
         #map { height: 100vh; width: 100vw; background: #222; }
+        
         .panel-control {
             position: absolute; top: 15px; left: 15px; z-index: 1000;
             background: white; padding: 15px; border-radius: 12px;
@@ -20,38 +23,49 @@
             text-decoration: none; padding: 10px; border-radius: 6px; font-weight: bold;
             margin-bottom: 10px; font-size: 13px;
         }
+        
         #buscador {
             width: 100%; padding: 10px; border: 2px solid #e0e0e0; 
             border-radius: 6px; box-sizing: border-box; font-size: 14px;
             margin-bottom: 8px;
         }
+
         .btn-gps {
             width: 100%; padding: 10px; background: #f44336; color: white; 
             border: none; border-radius: 6px; font-weight: bold; cursor: pointer;
             margin-bottom: 10px;
         }
-        .leyenda { margin-top: 10px; font-size: 11px; color: #444; border-top: 1px solid #eee; padding-top: 10px; }
+
+        .leyenda {
+            margin-top: 10px; font-size: 11px; color: #444;
+            border-top: 1px solid #eee; padding-top: 10px;
+        }
         .color-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; }
     </style>
 </head>
 <body>
+
     <div class="panel-control">
         <a href="/admin/" class="btn-admin">⚙️ PANEL DE CONTROL</a>
+        
         <input type="text" id="buscador" placeholder="🔍 Buscar Difunto o Código...">
         <div id="res-busqueda" style="font-size: 10px; color: #2196F3; margin-bottom: 8px;"></div>
+
         <button class="btn-gps" onclick="localizar()">📍 MI UBICACIÓN ACTUAL</button>
+        
         <div class="leyenda">
             <div><span class="color-dot" style="background:#2ecc71"></span> Al día</div>
             <div><span class="color-dot" style="background:#e74c3c"></span> En Mora</div>
             <div><span class="color-dot" style="background:#9b59b6"></span> Exhumado</div>
         </div>
     </div>
+
     <div id="map"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+
     <script>
-        // Configuración original que sí funciona
         var map = L.map('map', { zoomControl: false }).setView([14.782, -90.192], 17);
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
@@ -59,13 +73,7 @@
             maxZoom: 21, subdomains:['mt0','mt1','mt2','mt3']
         }).addTo(map);
 
-        // Activamos las "Ruedas de Colores" (Cluster)
-        var markersGroup = L.markerClusterGroup({
-            spiderfyOnMaxZoom: true,
-            showCoverageOnHover: false,
-            zoomToBoundsOnClick: true
-        });
-
+        var markersGroup = L.markerClusterGroup();
         var listaNichos = [];
         var userMarker = null;
 
@@ -74,13 +82,8 @@
             .then(data => {
                 listaNichos = data;
                 renderMarkers(data);
-                
-                // Autocentro inteligente al cargar
-                var pts = data.filter(n => n.lat && n.lng);
-                if (pts.length > 0) {
-                    var bounds = L.latLngBounds(pts.map(n => [n.lat, n.lng]));
-                    map.fitBounds(bounds);
-                }
+                // --- ASTUCIA: Verificar si venimos del Admin ---
+                verificarOrdenDeVuelo();
             });
 
         function renderMarkers(data) {
@@ -91,17 +94,20 @@
                     if (n.esta_exhumado) color = '#9b59b6';
 
                     var m = L.circleMarker([n.lat, n.lng], {
-                        radius: 8, fillColor: color, color: "#fff", weight: 2, fillOpacity: 0.9
+                        radius: 7, fillColor: color, color: "#fff", weight: 2, fillOpacity: 0.9
                     });
 
                     m.bindPopup(`<b>${n.codigo}</b><br>👤 ${n.nombre_difunto || 'DISPONIBLE'}<br>💰 Q${n.monto_arbitrio}`);
+                    n.marker = m;
                     markersGroup.addLayer(m);
                 }
             });
             map.addLayer(markersGroup);
         }
 
-        function localizar() { map.locate({setView: true, maxZoom: 19}); }
+        function localizar() {
+            map.locate({setView: true, maxZoom: 19});
+        }
 
         map.on('locationfound', function(e) {
             if (userMarker) map.removeLayer(userMarker);
@@ -109,14 +115,35 @@
             userMarker.bindPopup('📍 Estás aquí').openPopup();
         });
 
+        // BÚSQUEDA MANUAL
         document.getElementById('buscador').addEventListener('input', function(e) {
             var val = e.target.value.toLowerCase();
             if (val.length < 3) return;
-            var hallado = listaNichos.find(n => n.codigo.toLowerCase().includes(val));
-            if (hallado && hallado.lat) {
-                map.flyTo([hallado.lat, hallado.lng], 20);
-            }
+            ejecutarVuelo(val);
         });
+
+        // --- FUNCIÓN DE AUTOPILOTO ---
+        function verificarOrdenDeVuelo() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const nichoABuscar = urlParams.get('nicho');
+            if (nichoABuscar) {
+                ejecutarVuelo(nichoABuscar.toLowerCase());
+            }
+        }
+
+        function ejecutarVuelo(termino) {
+            var hallado = listaNichos.find(n => 
+                n.codigo.toLowerCase() === termino || 
+                n.codigo.toLowerCase().includes(termino) ||
+                (n.nombre_difunto && n.nombre_difunto.toLowerCase().includes(termino))
+            );
+
+            if (hallado && hallado.lat) {
+                document.getElementById('res-busqueda').innerText = "📍 Localizado: " + hallado.codigo;
+                map.flyTo([hallado.lat, hallado.lng], 20);
+                setTimeout(() => hallado.marker.openPopup(), 1500);
+            }
+        }
     </script>
 </body>
 </html>
