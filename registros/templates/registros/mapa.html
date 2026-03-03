@@ -1,79 +1,65 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <title>S.I.T. SANARATE | GLOBAL RADAR PRO</title>
+    <title>S.I.T. SANARATE | G.I.S. SUPREMO</title>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <style>
-        :root { --primary: #00ff88; --danger: #ff4444; --dark: #0a0f18; }
+        :root { --primary: #00ff88; --danger: #ff4444; --user: #007bff; --dark: #0a0f18; --admin: #6366f1; }
         body { margin: 0; padding: 0; background: #000; font-family: 'Inter', sans-serif; overflow: hidden; }
         #map { height: 100vh; width: 100vw; background: #000; }
 
-        /* Panel HUD Estilo Militar */
         .hud {
-            position: absolute; top: 20px; left: 20px; z-index: 1000;
-            background: rgba(10, 15, 24, 0.9); backdrop-filter: blur(15px);
-            padding: 20px; border-radius: 12px; width: 320px;
-            box-shadow: 0 0 30px rgba(0, 255, 136, 0.2); border: 1px solid rgba(0, 255, 136, 0.3);
+            position: absolute; top: 15px; left: 15px; z-index: 1000;
+            background: rgba(10, 15, 24, 0.95); backdrop-filter: blur(15px);
+            padding: 15px; border-radius: 12px; width: 280px;
+            box-shadow: 0 0 25px rgba(0, 255, 136, 0.2); border: 1px solid rgba(0, 255, 136, 0.3);
             color: white;
         }
-        .brand { font-weight: 900; font-size: 20px; text-align: center; margin-bottom: 15px; color: var(--primary); text-transform: uppercase; letter-spacing: 3px; }
-        .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .stat-card { background: rgba(0, 255, 136, 0.05); padding: 12px; border-radius: 8px; text-align: center; border: 1px solid rgba(0, 255, 136, 0.1); }
-        .stat-val { display: block; font-size: 22px; font-weight: 900; color: var(--primary); }
-        .stat-lbl { font-size: 10px; text-transform: uppercase; color: #888; letter-spacing: 1px; }
+        .stat-box { display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin: 10px 0; }
+        .btn { border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 11px; color: white; display: flex; align-items: center; justify-content: center; gap: 5px; }
         
-        #buscador { width: 100%; background: #000; border: 1px solid var(--primary); padding: 14px; border-radius: 8px; color: var(--primary); outline: none; font-family: monospace; }
-        #buscador::placeholder { color: rgba(0, 255, 136, 0.4); }
+        #buscador { width: 100%; background: #000; border: 1px solid var(--primary); padding: 10px; border-radius: 6px; color: var(--primary); margin-bottom: 10px; box-sizing: border-box; outline: none; }
+        .btn-gps { background: var(--user); width: 100%; font-size: 12px; margin-top: 5px; }
+        .btn-admin { background: var(--admin); width: 100%; margin-top: 5px; text-decoration: none; }
 
-        /* --- EL RADAR: Animación de Pulso Electromagnético --- */
-        .leaflet-interactive {
-            transition: all 0.3s;
-        }
+        /* ARREGLO DE VISIBILIDAD EN POPUPS */
+        .leaflet-popup-content-wrapper { background: #0a0f18 !important; color: white !important; border: 1px solid var(--primary); border-radius: 10px; }
+        .leaflet-popup-tip { background: #0a0f18 !important; }
+        .pop-container { width: 200px; text-align: center; }
+        .pop-photo { width: 100%; height: 130px; background: #000; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 1px solid #333; margin-bottom: 8px; }
+        .pop-photo img { width: 100%; height: 100%; object-fit: cover; }
+        .pop-info { color: white; margin-bottom: 8px; }
+        .pop-id { color: var(--primary); font-weight: 900; font-size: 14px; display: block; }
+        .pop-nombre { color: #fff; font-size: 12px; display: block; margin: 4px 0; }
+        .pop-monto { color: var(--danger); font-weight: bold; }
 
-        /* Pulso para puntos normales (Verde) */
-        .radar-pulse {
-            stroke-width: 10;
-            stroke: var(--primary);
-            stroke-opacity: 0.6;
-            animation: pulse-green 2s infinite linear;
-        }
-        @keyframes pulse-green {
-            0% { stroke-width: 2; stroke-opacity: 0.8; }
-            100% { stroke-width: 25; stroke-opacity: 0; }
-        }
-
-        /* Pulso para puntos en MORA (Rojo) */
-        .radar-pulse-mora {
-            stroke-width: 10;
-            stroke: var(--danger);
-            stroke-opacity: 0.6;
-            animation: pulse-red 1.5s infinite linear;
-        }
-        @keyframes pulse-red {
-            0% { stroke-width: 2; stroke-opacity: 0.8; }
-            100% { stroke-width: 30; stroke-opacity: 0; }
-        }
-
-        /* Popups Estilo Sci-Fi */
-        .leaflet-popup-content-wrapper { background: var(--dark); color: white; border-radius: 8px; border: 1px solid var(--primary); }
-        .pop-head { background: var(--primary); color: black; padding: 10px; font-weight: 900; text-align: center; margin: -14px -20px 10px -20px; }
-        .btn-edit { display: block; text-align: center; background: var(--primary); color: black; padding: 10px; border-radius: 4px; text-decoration: none; font-weight: bold; margin-top: 15px; }
+        /* RADARES */
+        .radar-pulse { animation: p-g 3s infinite; stroke: var(--primary); }
+        @keyframes p-g { 0% { stroke-width: 2; stroke-opacity: 1; r: 6; } 100% { stroke-width: 20; stroke-opacity: 0; r: 15; } }
+        .radar-pulse-mora { animation: p-r 1.2s infinite; stroke: var(--danger); }
+        @keyframes p-r { 0% { stroke-width: 3; stroke-opacity: 1; r: 6; } 100% { stroke-width: 30; stroke-opacity: 0; r: 25; } }
     </style>
 </head>
 <body>
     <div class="hud">
-        <div class="brand"><i class="fas fa-crosshairs"></i> G.I.S. RADAR</div>
-        <div class="stats">
-            <div class="stat-card"><span class="stat-val" id="t1">0</span><span class="stat-lbl">ACTIVOS</span></div>
-            <div class="stat-card"><span class="stat-val" id="t2" style="color:var(--danger)">0</span><span class="stat-lbl">MOROSOS</span></div>
+        <div style="font-weight:900; color:var(--primary); text-align:center; font-size:14px; margin-bottom:10px;">SANARATE G.I.S.</div>
+        <div class="stat-box">
+            <div style="text-align:center; width:50%; border-right:1px solid #333;"><b id="t1" style="color:var(--primary); font-size:18px;">0</b><br><small>TOTAL</small></div>
+            <div style="text-align:center; width:50%;"><b id="t2" style="color:var(--danger); font-size:18px;">0</b><br><small>MORA</small></div>
         </div>
-        <input type="text" id="buscador" placeholder="> ESCANEAR NOMBRE/ID...">
-        <a href="/admin/" style="display:block; text-align:center; color:#555; font-size:10px; margin-top:15px; text-decoration:none; letter-spacing:2px;">ACCESO AL NÚCLEO</a>
+        <div class="btn-group">
+            <button class="btn" style="background:var(--danger)" onclick="filtrar('mora')">MORA</button>
+            <button class="btn" style="background:#444" onclick="resetVista()">TODO</button>
+        </div>
+        <input type="text" id="buscador" placeholder="🔍 Buscar ID o Difunto...">
+        <button id="gps-btn" class="btn btn-gps" onclick="toggleGPS()">GPS CAMPO</button>
+        <a href="/admin/" class="btn btn-admin">PANEL ADMIN</a>
     </div>
 
     <div id="map"></div>
@@ -81,64 +67,73 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     <script>
-        var map = L.map('map', { zoomControl: false }).setView([14.782, -90.192], 18);
-        
-        // Capa Satelital Pro
-        L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-            maxZoom: 22, subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
-        }).addTo(map);
+        const CENTRO = [14.782, -90.192];
+        var map = L.map('map', { zoomControl: false }).setView(CENTRO, 18);
+        L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 22, subdomains: ['mt0','mt1','mt2','mt3'] }).addTo(map);
 
-        var markers = L.markerClusterGroup({ 
-            maxClusterRadius: 30,
-            showCoverageOnHover: false,
-            spiderfyOnMaxZoom: true
-        });
-
+        var markers = L.markerClusterGroup({ maxClusterRadius: 35 });
         var dataMaster = [];
+        var userMarker = null, watchId = null;
+
+        function cargarDatos(lista) {
+            markers.clearLayers();
+            document.getElementById('t1').innerText = dataMaster.length;
+            document.getElementById('t2').innerText = dataMaster.filter(n => n.monto_arbitrio <= 0 && n.nombre_difunto).length;
+
+            lista.forEach(n => {
+                if(n.lat && n.lng) {
+                    var isMora = (n.monto_arbitrio <= 0 && n.nombre_difunto);
+                    var color = isMora ? '#ff4444' : '#00ff88';
+                    var foto = n.foto_url ? `<img src="${n.foto_url}">` : `<i class="fas fa-camera fa-2x" style="color:#222"></i>`;
+
+                    var m = L.circleMarker([n.lat, n.lng], {
+                        radius: 6, fillColor: color, color: color, weight: 2, fillOpacity: 1, className: isMora ? 'radar-pulse-mora' : 'radar-pulse'
+                    }).bindPopup(`
+                        <div class="pop-container">
+                            <div class="pop-photo">${foto}</div>
+                            <span class="pop-id">ID: ${n.codigo}</span>
+                            <span class="pop-nombre">${n.nombre_difunto || 'DISPONIBLE'}</span>
+                            <span class="pop-monto" style="color:${color}">Q${n.monto_arbitrio}</span>
+                            <a href="/admin/registros/nicho/${n.id}/change/" target="_blank" style="display:block; background:var(--admin); color:#fff; text-align:center; padding:8px; margin-top:10px; border-radius:4px; text-decoration:none; font-weight:bold; font-size:11px;">GESTIONAR</a>
+                        </div>
+                    `);
+                    n.m = m;
+                    markers.addLayer(m);
+                }
+            });
+            map.addLayer(markers);
+        }
 
         fetch(window.location.origin + '/api/datos/')
             .then(res => res.json())
-            .then(data => {
-                dataMaster = data;
-                document.getElementById('t1').innerText = data.length;
-                document.getElementById('t2').innerText = data.filter(n => n.monto_arbitrio <= 0 && n.nombre_difunto).length;
+            .then(data => { dataMaster = data; cargarDatos(data); });
 
-                data.forEach(n => {
-                    if(n.lat && n.lng) {
-                        var isMora = (n.monto_arbitrio <= 0 && n.nombre_difunto);
-                        var pulseStyle = isMora ? 'radar-pulse-mora' : 'radar-pulse';
-                        var colorNicho = isMora ? '#ff4444' : '#00ff88';
+        function filtrar(t) { cargarDatos(t === 'mora' ? dataMaster.filter(n => n.monto_arbitrio <= 0 && n.nombre_difunto) : dataMaster); }
+        function resetVista() { map.flyTo(CENTRO, 18); cargarDatos(dataMaster); }
 
-                        var m = L.circleMarker([n.lat, n.lng], {
-                            radius: 6,
-                            fillColor: colorNicho,
-                            color: colorNicho,
-                            weight: 2,
-                            fillOpacity: 1,
-                            className: pulseStyle // Inyección de la animación
-                        }).bindPopup(`
-                            <div class="pop-head">SCAN: ${n.codigo}</div>
-                            <div style="padding:10px;">
-                                <b>DIFUNTO:</b><br>${n.nombre_difunto || 'RESERVA/DISP'}<br><br>
-                                <b>ESTADO:</b> Q${n.monto_arbitrio}<br>
-                                <a href="/admin/registros/nicho/${n.id}/change/" class="btn-edit">MODIFICAR</a>
-                            </div>
-                        `);
-                        n.m = m;
-                        markers.addLayer(m);
-                    }
-                });
-                map.addLayer(markers);
-            });
+        function toggleGPS() {
+            var btn = document.getElementById('gps-btn');
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId); watchId = null;
+                if(userMarker) map.removeLayer(userMarker); userMarker = null;
+                btn.innerHTML = 'GPS CAMPO';
+            } else {
+                btn.innerHTML = 'BUSCANDO...';
+                watchId = navigator.geolocation.watchPosition(pos => {
+                    var lat = pos.coords.latitude, lng = pos.coords.longitude;
+                    btn.innerHTML = 'GPS ACTIVO';
+                    if (!userMarker) userMarker = L.circleMarker([lat, lng], { radius: 10, fillColor: '#007bff', fillOpacity: 1, color: '#fff', weight: 2 }).addTo(map);
+                    else userMarker.setLatLng([lat, lng]);
+                    map.flyTo([lat, lng], 20);
+                }, null, { enableHighAccuracy: true });
+            }
+        }
 
         document.getElementById('buscador').addEventListener('input', function(e){
             var v = e.target.value.toLowerCase();
             if(v.length < 3) return;
             var f = dataMaster.find(n => n.codigo.toLowerCase().includes(v) || (n.nombre_difunto && n.nombre_difunto.toLowerCase().includes(v)));
-            if(f && f.lat) {
-                map.flyTo([f.lat, f.lng], 20, { duration: 1.5 });
-                setTimeout(() => { markers.zoomToShowLayer(f.m, () => f.m.openPopup()); }, 1600);
-            }
+            if(f && f.lat) { map.flyTo([f.lat, f.lng], 21); setTimeout(() => { markers.zoomToShowLayer(f.m, () => f.m.openPopup()); }, 1000); }
         });
     </script>
 </body>
