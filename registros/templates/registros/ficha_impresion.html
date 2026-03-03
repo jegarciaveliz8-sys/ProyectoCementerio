@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FICHA TÉCNICA - SANARATE</title>
+    <style>
+        body { font-family: sans-serif; padding: 40px; border: 5px double #004d40; }
+        .header { text-align: center; border-bottom: 2px solid #004d40; padding-bottom: 10px; }
+        .foto { width: 250px; height: 200px; border: 1px solid #ccc; float: right; }
+        .dato { margin: 15px 0; font-size: 18px; }
+        b { color: #004d40; }
+        @media print { .no-print { display: none; } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>MUNICIPALIDAD DE SANARATE</h1>
+        <h2>CONTROL DE CATASTRO - CEMENTERIO</h2>
+    </div>
+    
+    <div style="margin-top: 30px;">
+        {% if nicho.foto_nicho %}
+            <img src="{{ nicho.foto_nicho.url }}" class="foto">
+        {% else %}
+            <div class="foto" style="text-align:center; line-height:200px; color:#999;">SIN FOTO</div>
+        {% endif %}
+
+        <div class="dato"><b>CÓDIGO DE NICHO:</b> {{ nicho.codigo }}</div>
+        <div class="dato"><b>DIFUNTO:</b> {{ nicho.nombre_difunto|default:"DISPONIBLE" }}</div>
+        <div class="dato"><b>PROPIETARIO:</b> {{ nicho.propietario|default:"---" }}</div>
+        <div class="dato"><b>ESTADO DE PAGO:</b> Q{{ nicho.monto_arbitrio }}</div>
+        <div class="dato"><b>VENCIMIENTO:</b> {{ nicho.fecha_vencimiento|default:"---" }}</div>
+        <div class="dato"><b>COORDENADAS:</b> {{ nicho.lat }}, {{ nicho.lng }}</div>
+    </div>
+
+    <div style="margin-top: 50px; text-align: center;">
+        <p>__________________________</p>
+        <p>FIRMA Y SELLO DE CATASTRO</p>
+    </div>
+
+    <button class="no-print" onclick="window.print()" style="margin-top:30px; padding:15px; background:#004d40; color:white; border:none; cursor:pointer;">🖨️ IMPRIMIR AHORA</button>
+</body>
+</html>

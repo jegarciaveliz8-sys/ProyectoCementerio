@@ -2,81 +2,152 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Mapa Alta Definición - Sanarate</title>
+    <title>SISTEMA APOLO - SANARATE GIS PREMIER</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; }
-        #map { height: 100vh; width: 100vw; background: #000; }
-        .info-panel { 
-            position: absolute; top: 10px; left: 10px; z-index: 1000; 
-            background: rgba(0, 0, 0, 0.85); color: white; padding: 15px; 
-            border-radius: 8px; font-family: Arial, sans-serif; border: 2px solid #2196F3;
+        :root { --neon: #00ff88; --danger: #ff3333; --warn: #ffcc00; --info: #00d9ff; --bg: #0a0a0b; }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background: var(--bg); color: white; font-family: 'Inter', sans-serif; }
+        #map { height: 100vh; width: 100vw; z-index: 1; }
+
+        /* Panel Lateral de Comando */
+        .sidebar {
+            position: absolute; top: 15px; left: 15px; z-index: 1000;
+            width: 320px; background: rgba(15, 15, 20, 0.9);
+            backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px; padding: 25px; box-shadow: 0 10px 50px rgba(0,0,0,0.8);
         }
-        .nicho-popup { font-size: 14px; color: #333; min-width: 150px; }
+
+        .title-area { border-left: 4px solid var(--neon); padding-left: 15px; margin-bottom: 25px; }
+        .title-area h1 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+        .title-area span { font-size: 10px; color: var(--neon); text-transform: uppercase; font-weight: bold; }
+
+        /* Buscador Avanzado */
+        .search-container { position: relative; margin-bottom: 20px; }
+        .search-box {
+            width: 100%; padding: 14px 15px; background: #15151a; border: 1px solid #333;
+            border-radius: 8px; color: white; font-size: 14px; box-sizing: border-box; transition: 0.3s;
+        }
+        .search-box:focus { border-color: var(--neon); box-shadow: 0 0 15px rgba(0,255,136,0.3); outline: none; }
+
+        /* Tarjetas de Datos Rápidos */
+        .grid-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        .card { background: #1c1c24; padding: 12px; border-radius: 8px; border: 1px solid #2d2d3a; }
+        .card label { display: block; font-size: 9px; color: #888; text-transform: uppercase; margin-bottom: 4px; }
+        .card value { font-size: 18px; font-weight: bold; color: white; }
+
+        /* Filtros Pro */
+        .filter-group { background: #15151a; padding: 15px; border-radius: 8px; }
+        .filter-item { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 12px; }
+        .indicator { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+
+        /* Popup Estilo Premium */
+        .leaflet-popup-content-wrapper { background: #15151a; color: white; border-radius: 10px; border: 1px solid #333; }
+        .nicho-header { color: var(--neon); border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px; }
+        .btn-admin { 
+            display: block; width: 100%; padding: 10px; margin-top: 10px; 
+            background: #222; color: #fff; text-align: center; border-radius: 6px; 
+            text-decoration: none; font-size: 11px; font-weight: bold; border: 1px solid #444;
+        }
+        .btn-admin:hover { background: var(--neon); color: #000; }
     </style>
 </head>
 <body>
-    <div class="info-panel">
-        <h3 style="margin:0; color: #2196F3;">🛰️ HD SANARATE</h3>
-        <p>Nichos: <b>{{ nichos.count }}</b></p>
-        <input type="text" id="busc_codigo" placeholder="Código..." style="padding:5px; width:100px; border-radius:3px; border:none;">
-        <button onclick="buscarNicho()" style="padding:5px; background:#2196F3; color:white; border:none; border-radius:3px; cursor:pointer;">🔍</button>
-        <p style="font-size:10px; margin-top:10px;">Usa el scroll para ver los nichos de cerca</p>
+
+    <div class="sidebar">
+        <div class="title-area">
+            <h1>SANARATE GIS</h1>
+            <span>Infrastructure Management Pro</span>
+        </div>
+
+        <div class="grid-stats">
+            <div class="card"><label>Registros</label><value>{{ nichos.count }}</value></div>
+            <div class="card"><label>Área M2</label><value>~2,450</value></div>
+        </div>
+
+        <div class="search-container">
+            <input type="text" id="busc_codigo" class="search-box" placeholder="Buscar Nicho, Difunto o Dueño...">
+            <button onclick="buscarNicho()" class="btn" style="width:100%; margin-top:10px; background:var(--neon); color:black; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer;">LOCALIZAR UNIDAD</button>
+        </div>
+
+        <div class="filter-group">
+            <div class="filter-item"><span><span class="indicator" style="background:var(--neon);"></span>DISPONIBLES</span> <span id="l-c">0</span></div>
+            <div class="filter-item"><span><span class="indicator" style="background:var(--danger);"></span>OCUPADOS</span> <span id="o-c">0</span></div>
+            <div class="filter-item"><span><span class="indicator" style="background:var(--warn);"></span>RESERVAS</span> <span id="r-c">0</span></div>
+            <div class="filter-item"><span><span class="indicator" style="background:var(--info);"></span>AL DÍA</span> <span id="a-c">0</span></div>
+        </div>
+        
+        <p style="font-size: 9px; color: #555; margin-top: 20px; text-align: center;">CONEXIÓN ENCRIPTADA CON DB.SQLITE3 PRO</p>
     </div>
 
     <div id="map"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     <script>
-        // Capa de Google Satélite (Mucho más nítida para ver estructuras)
-        var googleSat = L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{
-            maxZoom: 21,
-            subdomains:['mt0','mt1','mt2','mt3']
-        });
+        // Capas HD Multinivel
+        var sat = L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{maxZoom:21, subdomains:['mt0','mt1','mt2','mt3']});
+        var streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
 
-        var map = L.map('map', {
-            center: [14.7826, -90.2045],
-            zoom: 19,
-            layers: [googleSat]
-        });
+        var map = L.map('map', { center: [14.7826, -90.2045], zoom: 19, layers: [sat], zoomControl: false });
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-        var markers = {};
+        var markersGroup = L.markerClusterGroup({ chunkedLoading: true, maxClusterRadius: 30, spiderfyOnMaxZoom: true });
+        var index = {};
+        var counts = {l:0, o:0, r:0, a:0};
 
         {% for n in nichos %}
             {% if n.lat and n.lng %}
-                (function() {
-                    var lat = parseFloat("{{ n.lat|stringformat:'.15f' }}".replace(',', '.'));
-                    var lng = parseFloat("{{ n.lng|stringformat:'.15f' }}".replace(',', '.'));
-                    var cod = "{{ n.codigo }}";
-                    
-                    // Círculos más pequeños y transparentes para que dejen ver el nicho abajo
-                    var m = L.circleMarker([lat, lng], {
-                        radius: 3,
-                        fillColor: "#00ecff", // Celeste neón
-                        color: "#fff",
-                        weight: 0.5,
-                        opacity: 0.5,
-                        fillOpacity: 0.7
-                    }).addTo(map);
+            (function() {
+                var lat = parseFloat("{{ n.lat|stringformat:'.15f' }}".replace(',', '.'));
+                var lng = parseFloat("{{ n.lng|stringformat:'.15f' }}".replace(',', '.'));
+                var cod = "{{ n.codigo }}";
+                var dif = "{{ n.nombre_difunto|default:'' }}".toUpperCase();
+                
+                var col = "#00ff88"; // Verde
+                if (dif.includes("RESERVA")) { col = "#ffcc00"; counts.r++; }
+                else if (dif.includes("DIA") || dif.includes("DÍA")) { col = "#00d9ff"; counts.a++; }
+                else if (dif != "" && !dif.includes("DISPONIBLE")) { col = "#ff3333"; counts.o++; }
+                else { counts.l++; }
 
-                    m.bindPopup(`
-                        <div class="nicho-popup">
-                            <b>🏛️ Nicho: ${cod}</b><hr>
-                            👤 <b>Dueño:</b> {{ n.propietario|default:'SIN REGISTRO' }}<br>
-                            ⚰️ <b>Difunto:</b> {{ n.nombre_difunto|default:'RESERVA' }}
+                var m = L.circleMarker([lat, lng], {
+                    radius: 6, fillColor: col, color: "#fff", weight: 1, opacity: 1, fillOpacity: 0.9
+                });
+
+                m.bindPopup(`
+                    <div class="nicho-popup">
+                        <div class="nicho-header"><b>NICHO: ${cod}</b></div>
+                        <div style="font-size:12px;">
+                            👤 <b>PROPIETARIO:</b> {{ n.propietario|default:'SIN DATOS' }}<br>
+                            ⚰️ <b>DIFUNTO:</b> ${dif || 'DISPONIBLE'}<br>
+                            📅 <b>VENCE:</b> {{ n.fecha_vencimiento|default:'N/A' }}
                         </div>
-                    `);
-                    
-                    markers[cod] = m;
-                })();
+                        <a href="/admin/registros/nicho/{{ n.id }}/change/" target="_blank" class="btn-admin">ABRIR EXPEDIENTE DIGITAL</a>
+                    </div>
+                `);
+                index[cod] = m;
+                markersGroup.addLayer(m);
+            })();
             {% endif %}
         {% endfor %}
 
+        map.addLayer(markersGroup);
+
+        // Actualizar UI
+        document.getElementById('l-c').innerText = counts.l;
+        document.getElementById('o-c').innerText = counts.o;
+        document.getElementById('r-c').innerText = counts.r;
+        document.getElementById('a-c').innerText = counts.a;
+
         function buscarNicho() {
-            var code = document.getElementById('busc_codigo').value.toUpperCase();
-            if (markers[code]) {
-                map.setView(markers[code].getLatLng(), 20);
-                markers[code].openPopup();
+            var v = document.getElementById('busc_codigo').value.toUpperCase().trim();
+            if (index[v]) {
+                markersGroup.zoomToShowLayer(index[v], function() {
+                    index[v].openPopup();
+                });
+            } else {
+                alert("Unidad No Localizada");
             }
         }
     </script>
