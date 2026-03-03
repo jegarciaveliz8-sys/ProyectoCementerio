@@ -1,11 +1,8 @@
 *.pyc
 __pycache__/
 db.sqlite3
-*.bak
-*.backup_seguro
-CEMENTERIO_RESPALDO_*.sqlite3
-backups/
-venv_cementerio/
+media/
+*.zip
+venv*/
+.env
 .DS_Store
-staticfiles/
-registros/__pycache__/
