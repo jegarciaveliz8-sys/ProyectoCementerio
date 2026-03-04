@@ -1,140 +1,80 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-    <title>S.I.T. SANARATE | G.I.S. SUPREMO</title>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta charset="UTF-8">
+    <title>SISTEMA G.I.S. SANARATE</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <style>
-        :root { --primary: #00ff88; --danger: #ff4444; --user: #007bff; --dark: #0a0f18; --admin: #6366f1; }
-        body { margin: 0; padding: 0; background: #000; font-family: 'Inter', sans-serif; overflow: hidden; }
-        #map { height: 100vh; width: 100vw; background: #000; }
-
-        .hud {
-            position: absolute; top: 15px; left: 15px; z-index: 1000;
-            background: rgba(10, 15, 24, 0.95); backdrop-filter: blur(15px);
-            padding: 15px; border-radius: 12px; width: 280px;
-            box-shadow: 0 0 25px rgba(0, 255, 136, 0.2); border: 1px solid rgba(0, 255, 136, 0.3);
-            color: white;
-        }
-        .stat-box { display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px; }
-        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin: 10px 0; }
-        .btn { border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 11px; color: white; display: flex; align-items: center; justify-content: center; gap: 5px; }
+        body, html, #map { height: 100%; margin: 0; background: #000; }
         
-        #buscador { width: 100%; background: #000; border: 1px solid var(--primary); padding: 10px; border-radius: 6px; color: var(--primary); margin-bottom: 10px; box-sizing: border-box; outline: none; }
-        .btn-gps { background: var(--user); width: 100%; font-size: 12px; margin-top: 5px; }
-        .btn-admin { background: var(--admin); width: 100%; margin-top: 5px; text-decoration: none; }
-
-        /* ARREGLO DE VISIBILIDAD EN POPUPS */
-        .leaflet-popup-content-wrapper { background: #0a0f18 !important; color: white !important; border: 1px solid var(--primary); border-radius: 10px; }
-        .leaflet-popup-tip { background: #0a0f18 !important; }
-        .pop-container { width: 200px; text-align: center; }
-        .pop-photo { width: 100%; height: 130px; background: #000; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 1px solid #333; margin-bottom: 8px; }
-        .pop-photo img { width: 100%; height: 100%; object-fit: cover; }
-        .pop-info { color: white; margin-bottom: 8px; }
-        .pop-id { color: var(--primary); font-weight: 900; font-size: 14px; display: block; }
-        .pop-nombre { color: #fff; font-size: 12px; display: block; margin: 4px 0; }
-        .pop-monto { color: var(--danger); font-weight: bold; }
-
-        /* RADARES */
-        .radar-pulse { animation: p-g 3s infinite; stroke: var(--primary); }
-        @keyframes p-g { 0% { stroke-width: 2; stroke-opacity: 1; r: 6; } 100% { stroke-width: 20; stroke-opacity: 0; r: 15; } }
-        .radar-pulse-mora { animation: p-r 1.2s infinite; stroke: var(--danger); }
-        @keyframes p-r { 0% { stroke-width: 3; stroke-opacity: 1; r: 6; } 100% { stroke-width: 30; stroke-opacity: 0; r: 25; } }
+        /* RADAR ACTIVO */
+        .radar-pulse {
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 0 rgba(255, 255, 255, 0.7);
+            animation: pulse-animation 1.5s infinite;
+        }
+        @keyframes pulse-animation {
+            0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(255, 255, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+        }
     </style>
 </head>
 <body>
-    <div class="hud">
-        <div style="font-weight:900; color:var(--primary); text-align:center; font-size:14px; margin-bottom:10px;">SANARATE G.I.S.</div>
-        <div class="stat-box">
-            <div style="text-align:center; width:50%; border-right:1px solid #333;"><b id="t1" style="color:var(--primary); font-size:18px;">0</b><br><small>TOTAL</small></div>
-            <div style="text-align:center; width:50%;"><b id="t2" style="color:var(--danger); font-size:18px;">0</b><br><small>MORA</small></div>
-        </div>
-        <div class="btn-group">
-            <button class="btn" style="background:var(--danger)" onclick="filtrar('mora')">MORA</button>
-            <button class="btn" style="background:#444" onclick="resetVista()">TODO</button>
-        </div>
-        <input type="text" id="buscador" placeholder="🔍 Buscar ID o Difunto...">
-        <button id="gps-btn" class="btn btn-gps" onclick="toggleGPS()">GPS CAMPO</button>
-        <a href="/admin/" class="btn btn-admin">PANEL ADMIN</a>
-    </div>
-
     <div id="map"></div>
-
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     <script>
-        const CENTRO = [14.782, -90.192];
-        var map = L.map('map', { zoomControl: false }).setView(CENTRO, 18);
-        L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 22, subdomains: ['mt0','mt1','mt2','mt3'] }).addTo(map);
+        // 1. Iniciar mapa
+        var map = L.map('map').setView([14.7821, -90.2049], 18);
 
-        var markers = L.markerClusterGroup({ maxClusterRadius: 35 });
-        var dataMaster = [];
-        var userMarker = null, watchId = null;
+        // 2. FORZAR CAPA SATÉLITE GOOGLE (Híbrida)
+        var googleSat = L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+            maxZoom: 22,
+            subdomains:['mt0','mt1','mt2','mt3'],
+            attribution: 'Municipalidad de Sanarate'
+        }).addTo(map);
 
-        function cargarDatos(lista) {
-            markers.clearLayers();
-            document.getElementById('t1').innerText = dataMaster.length;
-            document.getElementById('t2').innerText = dataMaster.filter(n => n.monto_arbitrio <= 0 && n.nombre_difunto).length;
+        // 3. Dibujar tus puntos
+        var markers = [];
+        {% for n in nichos %}
+            {% if n.lat and n.lng %}
+                // Forzamos que la latitud y longitud usen punto decimal
+                var lat = parseFloat("{{ n.lat }}".replace(',', '.'));
+                var lng = parseFloat("{{ n.lng }}".replace(',', '.'));
+                
+                var color = "{{ n.monto_arbitrio }}" > 0 ? "#22c55e" : "#ef4444";
+                
+                var m = L.circleMarker([lat, lng], {
+                    radius: 12,
+                    fillColor: color,
+                    color: "white",
+                    weight: 2,
+                    fillOpacity: 1,
+                    className: 'radar-pulse'
+                }).addTo(map);
 
-            lista.forEach(n => {
-                if(n.lat && n.lng) {
-                    var isMora = (n.monto_arbitrio <= 0 && n.nombre_difunto);
-                    var color = isMora ? '#ff4444' : '#00ff88';
-                    var foto = n.foto_url ? `<img src="${n.foto_url}">` : `<i class="fas fa-camera fa-2x" style="color:#222"></i>`;
+                m.bindPopup(`
+                    <div style="text-align:center;">
+                        <h3 style="margin:0;">Nicho: {{ n.codigo }}</h3>
+                        <p><b>Difunto:</b> {{ n.nombre_difunto|default:"Dato Guardado" }}</p>
+                        <p><b>Estado:</b> ${color == "#22c55e" ? "SOLVENTE" : "MORA"}</p>
+                        {% if n.qr_code %}
+                            <img src="{{ n.qr_code.url }}" width="100">
+                        {% endif %}
+                    </div>
+                `);
+                markers.push([lat, lng]);
+            {% endif %}
+        {% endfor %}
 
-                    var m = L.circleMarker([n.lat, n.lng], {
-                        radius: 6, fillColor: color, color: color, weight: 2, fillOpacity: 1, className: isMora ? 'radar-pulse-mora' : 'radar-pulse'
-                    }).bindPopup(`
-                        <div class="pop-container">
-                            <div class="pop-photo">${foto}</div>
-                            <span class="pop-id">ID: ${n.codigo}</span>
-                            <span class="pop-nombre">${n.nombre_difunto || 'DISPONIBLE'}</span>
-                            <span class="pop-monto" style="color:${color}">Q${n.monto_arbitrio}</span>
-                            <a href="/admin/registros/nicho/${n.id}/change/" target="_blank" style="display:block; background:var(--admin); color:#fff; text-align:center; padding:8px; margin-top:10px; border-radius:4px; text-decoration:none; font-weight:bold; font-size:11px;">GESTIONAR</a>
-                        </div>
-                    `);
-                    n.m = m;
-                    markers.addLayer(m);
-                }
-            });
-            map.addLayer(markers);
+        // 4. Zoom automático a los puntos reales
+        if (markers.length > 0) {
+            map.fitBounds(L.latLngBounds(markers), {padding: [50, 50]});
         }
-
-        fetch(window.location.origin + '/api/datos/')
-            .then(res => res.json())
-            .then(data => { dataMaster = data; cargarDatos(data); });
-
-        function filtrar(t) { cargarDatos(t === 'mora' ? dataMaster.filter(n => n.monto_arbitrio <= 0 && n.nombre_difunto) : dataMaster); }
-        function resetVista() { map.flyTo(CENTRO, 18); cargarDatos(dataMaster); }
-
-        function toggleGPS() {
-            var btn = document.getElementById('gps-btn');
-            if (watchId) {
-                navigator.geolocation.clearWatch(watchId); watchId = null;
-                if(userMarker) map.removeLayer(userMarker); userMarker = null;
-                btn.innerHTML = 'GPS CAMPO';
-            } else {
-                btn.innerHTML = 'BUSCANDO...';
-                watchId = navigator.geolocation.watchPosition(pos => {
-                    var lat = pos.coords.latitude, lng = pos.coords.longitude;
-                    btn.innerHTML = 'GPS ACTIVO';
-                    if (!userMarker) userMarker = L.circleMarker([lat, lng], { radius: 10, fillColor: '#007bff', fillOpacity: 1, color: '#fff', weight: 2 }).addTo(map);
-                    else userMarker.setLatLng([lat, lng]);
-                    map.flyTo([lat, lng], 20);
-                }, null, { enableHighAccuracy: true });
-            }
-        }
-
-        document.getElementById('buscador').addEventListener('input', function(e){
-            var v = e.target.value.toLowerCase();
-            if(v.length < 3) return;
-            var f = dataMaster.find(n => n.codigo.toLowerCase().includes(v) || (n.nombre_difunto && n.nombre_difunto.toLowerCase().includes(v)));
-            if(f && f.lat) { map.flyTo([f.lat, f.lng], 21); setTimeout(() => { markers.zoomToShowLayer(f.m, () => f.m.openPopup()); }, 1000); }
-        });
+        
+        // Refresco de seguridad para el gris
+        setTimeout(function(){ map.invalidateSize(); }, 500);
     </script>
 </body>
 </html>

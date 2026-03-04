@@ -3,69 +3,69 @@ from django.http import HttpResponse
 from django.contrib import admin
 from .models import Nicho
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
+from django.db.models import Sum, Count, Q
+from django.utils import timezone
 
 @admin.register(Nicho)
 class NichoAdmin(admin.ModelAdmin):
-    list_display = ('codigo', 'ver_qr', 'estado_legal', 'pago_status', 'ver_mapa', 'boton_imprimir')
+    list_display = ('codigo', 'nombre_difunto', 'propietario', 'status_financiero', 'indicador_tiempo', 'consola_tecnologica')
+    list_editable = ('nombre_difunto', 'propietario')
     search_fields = ('codigo', 'nombre_difunto', 'propietario')
-    list_filter = ('esta_exhumado', 'monto_arbitrio', 'fecha_vencimiento')
-    ordering = ('codigo',)
-    
-    # 1. Agregamos 'limpiar_pagos' a la lista de acciones
-    actions = ['marcar_exhumado', 'marcar_ocupado', 'exportar_a_csv', 'limpiar_pagos']
+    list_filter = ('esta_exhumado', 'monto_arbitrio', ('fecha_vencimiento', admin.DateFieldListFilter))
+    actions = ['exportar_a_excel']
 
-    # --- NUEVA ACCIÓN: LIMPIAR PAGOS ---
-    @admin.action(description="💰 Limpiar saldos (Poner en Q0.00)")
-    def limpiar_pagos(self, request, queryset):
-        filas_actualizadas = queryset.update(monto_arbitrio=0.00)
-        self.message_user(request, f"Se han reseteado los pagos de {filas_actualizadas} nichos.")
+    def status_financiero(self, obj):
+        if obj.monto_arbitrio > 0:
+            return format_html('<b style="color:#28a745;">✅ Q{}</b>', obj.monto_arbitrio)
+        return mark_safe('<b style="color:#dc3545;">🚨 MORA</b>')
 
-    # --- OTRAS ACCIONES ---
-    @admin.action(description="📊 Exportar seleccionados a Excel (CSV)")
-    def exportar_a_csv(self, request, queryset):
-        response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="reporte_sanarate.csv"'
-        writer = csv.writer(response)
-        writer.writerow(['Codigo', 'Propietario', 'Difunto', 'Monto', 'Vencimiento', 'Exhumado'])
-        for n in queryset:
-            writer.writerow([n.codigo, n.propietario, n.nombre_difunto, n.monto_arbitrio, n.fecha_vencimiento, n.esta_exhumado])
-        return response
+    def indicador_tiempo(self, obj):
+        if not obj.fecha_vencimiento: 
+            return mark_safe('<span style="color:#f39c12;">SIN FECHA</span>')
+        dias = (obj.fecha_vencimiento - timezone.now().date()).days
+        color = "#28a745" if dias > 0 else "#dc3545"
+        return format_html('<b style="color:{};">{}d</b>', color, dias)
 
-    @admin.action(description="💀 Marcar como EXHUMADOS")
-    def marcar_exhumado(self, request, queryset):
-        queryset.update(esta_exhumado=True)
-
-    @admin.action(description="👤 Marcar como OCUPADOS")
-    def marcar_ocupado(self, request, queryset):
-        queryset.update(esta_exhumado=False)
-
-    # --- FUNCIONES DE COLUMNAS (IGUAL QUE ANTES) ---
-    def ver_qr(self, obj):
+    def consola_tecnologica(self, obj):
+        links = []
         if obj.qr_code:
-            return format_html('<img src="{}" style="width:30px; height:30px; border:1px solid #eee;"/>', obj.qr_code.url)
-        return "-"
-    ver_qr.short_description = "QR"
+            # Aquí estaba el error, ahora está corregido pasando la URL del QR
+            links.append(format_html(
+                '<img src="{}" style="width:30px; border-radius:4px; cursor:zoom-in; transition: 0.3s;" '
+                'onmouseover="this.style.transform=\'scale(8)\'; this.style.zIndex=\'1000\'; this.style.position=\'absolute\';" '
+                'onmouseout="this.style.transform=\'scale(1)\'; this.style.position=\'static\';"/>', 
+                obj.qr_code.url
+            ))
+        if obj.lat:
+            links.append(mark_safe('<a href="/mapa/" style="font-size:20px; text-decoration:none; margin-left:10px;">📍</a>'))
+        
+        return mark_safe(f'<div style="display:flex; align-items:center;">{" ".join(links)}</div>')
 
-    def estado_legal(self, obj):
-        if obj.esta_exhumado:
-            return format_html('<span style="background:#000; color:#fff; padding:2px 8px; border-radius:10px; font-size:11px;">💀 EXHUMADO</span>')
-        return format_html('<span style="color:#2980b9; font-weight:bold;">👤 OCUPADO</span>')
-    estado_legal.short_description = "ESTADO"
-
-    def pago_status(self, obj):
-        color = "#2ecc71" if obj.monto_arbitrio > 0 else "#e74c3c"
-        return format_html('<b style="color:{};">Q{}</b>', color, obj.monto_arbitrio)
-    pago_status.short_description = "PAGO"
-
-    def ver_mapa(self, obj):
-        if obj.lat and obj.lng:
-            return format_html('<a href="/?nicho={}" style="text-decoration:none;">📍 VER</a>', obj.codigo)
-        return "-"
-    ver_mapa.short_description = "MAPA"
-
-    def boton_imprimir(self, obj):
-        return format_html(
-            '<a href="/imprimir/{}/" target="_blank" style="background:#444; color:white; padding:3px 10px; border-radius:4px; text-decoration:none; font-size:11px;">FICHA</a>', 
-            obj.id
+    def changelist_view(self, request, extra_context=None):
+        qs = self.get_queryset(request).aggregate(
+            p=Sum('monto_arbitrio'), 
+            m=Count('id', filter=Q(monto_arbitrio=0)), 
+            t=Count('id')
         )
-    boton_imprimir.short_description = "IMPRIMIR"
+        extra_context = extra_context or {}
+        # Dashboard limpio y sin errores de agregación
+        extra_context['title'] = format_html(
+            '<div style="background:#111827; padding:20px; border-radius:12px; color:white; display:flex; gap:50px; border-bottom:5px solid #374151;">'
+            '<div><small style="color:#9ca3af; font-weight:bold;">💰 RECAUDACIÓN</small><br><span style="font-size:24px; font-weight:bold; color:#4ade80;">Q{}</span></div>'
+            '<div><small style="color:#9ca3af; font-weight:bold;">🚨 MOROSIDAD</small><br><span style="font-size:24px; font-weight:bold; color:#f87171;">{} Nichos</span></div>'
+            '<div><small style="color:#9ca3af; font-weight:bold;">📊 REGISTROS</small><br><span style="font-size:24px; font-weight:bold;">{}</span></div>'
+            '</div>', 
+            qs['p'] or 0, qs['m'], qs['t']
+        )
+        return super().changelist_view(request, extra_context=extra_context)
+
+    @admin.action(description="📊 Exportar Reporte")
+    def exportar_a_excel(self, request, queryset):
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="Sanarate_Reporte.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['Codigo', 'Difunto', 'Arbitrio'])
+        for n in queryset: 
+            writer.writerow([n.codigo, n.nombre_difunto, n.monto_arbitrio])
+        return response

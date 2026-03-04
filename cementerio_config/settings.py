@@ -4,8 +4,6 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-presentacion-sanarate-2026'
 DEBUG = True
-
-# Permite que entren desde cualquier IP de la red local
 ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
@@ -16,8 +14,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'cloudinary_storage',
-    'cloudinary',
     'registros',
     'auditlog',
 ]
@@ -54,7 +50,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'cementerio_config.wsgi.application'
 
-# BASE DE DATOS LOCAL (Se guarda en el archivo db.sqlite3 de tu carpeta)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -69,17 +64,11 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
-
-# Manejo de archivos estáticos local
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Cloudinary para fotos (Se mantiene igual)
-CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': 'dg8ze1v8g',
-    'API_KEY': '779673535231369',
-    'API_SECRET': 'nPd3_AaeIKTv5-h14i-RbhqIxNQ'
-}
-
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+# --- CONFIGURACIÓN DE MEDIOS LOCAL (PARA TUS 9,998 QRs) ---
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'

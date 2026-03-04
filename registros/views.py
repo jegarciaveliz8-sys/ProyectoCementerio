@@ -1,6 +1,28 @@
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
+from django.db.models import Sum
 from .models import Nicho
+
+def dashboard(request):
+    # --- CÁLCULOS ESTADÍSTICOS (Nivel Mundial) ---
+    total = Nicho.objects.count()
+    # Consideramos ocupados los que tienen nombre de difunto
+    ocupados = Nicho.objects.exclude(nombre_difunto__isnull=True).exclude(nombre_difunto="").count()
+    disponibles = total - ocupados
+    
+    # Mora: Nichos con difunto que tienen Q0.00 de arbitrio
+    mora_count = Nicho.objects.filter(monto_arbitrio__lte=0).exclude(nombre_difunto="").count()
+    # Recaudación: Suma de todos los montos pagados
+    recaudado = Nicho.objects.aggregate(Sum('monto_arbitrio'))['monto_arbitrio__sum'] or 0
+    
+    context = {
+        'total': total,
+        'ocupados': ocupados,
+        'disponibles': disponibles,
+        'mora_total': mora_count,
+        'recaudado': recaudado,
+    }
+    return render(request, 'registros/dashboard.html', context)
 
 def mapa_cimenterio(request):
     nichos = Nicho.objects.exclude(lat__isnull=True).exclude(lng__isnull=True)
@@ -18,7 +40,6 @@ def datos_nichos_json(request):
             'lng': n.lng,
             'esta_exhumado': n.esta_exhumado,
             'monto_arbitrio': float(n.monto_arbitrio),
-            # AQUÍ ESTÁ LA MAGIA: Si tiene foto, manda el link de Cloudinary
             'foto_url': n.foto_nicho.url if n.foto_nicho else None,
         })
     return JsonResponse(data, safe=False)

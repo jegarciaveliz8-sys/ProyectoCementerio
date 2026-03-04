@@ -1,42 +1,92 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-    <title>FICHA TÉCNICA - SANARATE</title>
+    <meta charset="UTF-8">
+    <title>Ficha Técnica - {{ nicho.codigo }}</title>
     <style>
-        body { font-family: sans-serif; padding: 40px; border: 5px double #004d40; }
-        .header { text-align: center; border-bottom: 2px solid #004d40; padding-bottom: 10px; }
-        .foto { width: 250px; height: 200px; border: 1px solid #ccc; float: right; }
-        .dato { margin: 15px 0; font-size: 18px; }
-        b { color: #004d40; }
-        @media print { .no-print { display: none; } }
+        @media print {
+            .no-print { display: none; }
+            body { background: white; }
+            .ticket { box-shadow: none; border: 1px solid #ccc; }
+        }
+        body { font-family: 'Arial', sans-serif; background: #f0f0f0; display: flex; justify-content: center; padding: 20px; }
+        .ticket { background: white; width: 21cm; min-height: 14cm; padding: 40px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1); position: relative; border-top: 10px solid #27ae60; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 30px; }
+        .muni-info h1 { margin: 0; font-size: 1.4rem; color: #2c3e50; }
+        .muni-info p { margin: 2px 0; color: #7f8c8d; font-size: 0.9rem; }
+        .content { display: grid; grid-template-columns: 1fr 200px; gap: 30px; }
+        .data-field { margin-bottom: 15px; border-bottom: 1px solid #f9f9f9; padding-bottom: 5px; }
+        .label { font-size: 0.75rem; color: #95a5a6; text-transform: uppercase; font-weight: bold; }
+        .value { font-size: 1.1rem; color: #2c3e50; font-weight: bold; }
+        .qr-section { text-align: center; border: 1px solid #eee; padding: 15px; border-radius: 10px; }
+        .qr-section img { width: 150px; height: 150px; }
+        .footer-note { margin-top: 40px; font-size: 0.8rem; color: #bdc3c7; text-align: center; border-top: 1px dashed #eee; padding-top: 20px; }
+        .stamp { position: absolute; right: 50px; bottom: 80px; opacity: 0.1; transform: rotate(-20deg); font-size: 4rem; color: #27ae60; font-weight: bold; border: 8px solid #27ae60; padding: 10px; border-radius: 20px; pointer-events: none; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>MUNICIPALIDAD DE SANARATE</h1>
-        <h2>CONTROL DE CATASTRO - CEMENTERIO</h2>
-    </div>
-    
-    <div style="margin-top: 30px;">
-        {% if nicho.foto_nicho %}
-            <img src="{{ nicho.foto_nicho.url }}" class="foto">
-        {% else %}
-            <div class="foto" style="text-align:center; line-height:200px; color:#999;">SIN FOTO</div>
-        {% endif %}
+    <div class="ticket">
+        <div class="header">
+            <div class="muni-info">
+                <h1>MUNICIPALIDAD DE SANARATE</h1>
+                <p>Departamento de Servicios Públicos</p>
+                <p>Sistema de Información Geográfica de Cementerios (G.I.S.)</p>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 1.5rem; font-weight: bold; color: #27ae60;">{{ nicho.codigo }}</div>
+                <div class="label">ID Registro: #{{ nicho.id }}</div>
+            </div>
+        </div>
 
-        <div class="dato"><b>CÓDIGO DE NICHO:</b> {{ nicho.codigo }}</div>
-        <div class="dato"><b>DIFUNTO:</b> {{ nicho.nombre_difunto|default:"DISPONIBLE" }}</div>
-        <div class="dato"><b>PROPIETARIO:</b> {{ nicho.propietario|default:"---" }}</div>
-        <div class="dato"><b>ESTADO DE PAGO:</b> Q{{ nicho.monto_arbitrio }}</div>
-        <div class="dato"><b>VENCIMIENTO:</b> {{ nicho.fecha_vencimiento|default:"---" }}</div>
-        <div class="dato"><b>COORDENADAS:</b> {{ nicho.lat }}, {{ nicho.lng }}</div>
-    </div>
+        <div class="content">
+            <div class="info-main">
+                <div class="data-field">
+                    <div class="label">Nombre del Difunto / Ocupante</div>
+                    <div class="value">{{ nicho.nombre_difunto|default:"ESPACIO DISPONIBLE" }}</div>
+                </div>
+                <div class="data-field">
+                    <div class="label">Propietario Legal</div>
+                    <div class="value">{{ nicho.propietario|default:"MUNICIPALIDAD DE SANARATE" }}</div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="data-field">
+                        <div class="label">Monto de Arbitrio</div>
+                        <div class="value">Q{{ nicho.monto_arbitrio }}</div>
+                    </div>
+                    <div class="data-field">
+                        <div class="label">Estado de Exhumación</div>
+                        <div class="value">{% if nicho.esta_exhumado %}SÍ (EXHUMADO){% else %}NO (OCUPADO){% endif %}</div>
+                    </div>
+                </div>
+                <div class="data-field">
+                    <div class="label">Coordenadas G.P.S.</div>
+                    <div class="value">{{ nicho.lat }}, {{ nicho.lng }}</div>
+                </div>
+            </div>
 
-    <div style="margin-top: 50px; text-align: center;">
-        <p>__________________________</p>
-        <p>FIRMA Y SELLO DE CATASTRO</p>
-    </div>
+            <div class="qr-section">
+                <div class="label" style="margin-bottom: 10px;">Validación Digital</div>
+                {% if nicho.qr_code %}
+                    <img src="{{ nicho.qr_code.url }}" alt="QR Nicho">
+                {% else %}
+                    <div style="height:150px; display:flex; align-items:center; justify-content:center; background:#f9f9f9; color:#ccc;">Sin QR</div>
+                {% endif %}
+                <p style="font-size: 0.7rem; color: #7f8c8d; margin-top: 10px;">Escanee para ver ubicación en el mapa interactivo</p>
+            </div>
+        </div>
 
-    <button class="no-print" onclick="window.print()" style="margin-top:30px; padding:15px; background:#004d40; color:white; border:none; cursor:pointer;">🖨️ IMPRIMIR AHORA</button>
+        <div class="stamp">OFICIAL</div>
+
+        <div class="footer-note">
+            Este documento es una constancia digital generada por el S.I.T. de Sanarate el {% now "d/m/Y H:i" %}.<br>
+            Cualquier alteración anula la validez de este registro.
+        </div>
+
+        <div class="no-print" style="margin-top: 30px; text-align: center;">
+            <button onclick="window.print()" style="background: #27ae60; color: white; border: none; padding: 12px 25px; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                <i class="fas fa-print"></i> IMPRIMIR FICHA OFICIAL
+            </button>
+        </div>
+    </div>
 </body>
 </html>
