@@ -7,8 +7,6 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         body, html, #map { height: 100%; margin: 0; background: #000; font-family: sans-serif; overflow: hidden; }
-
-        /* BUSCADOR */
         #search-box {
             position: absolute; top: 20px; left: 50px; z-index: 1000;
             background: rgba(15, 23, 42, 0.95); padding: 12px; border-radius: 8px;
@@ -16,15 +14,11 @@
         }
         #search-box input { background: #1e293b; border: 1px solid #334155; color: #fff; padding: 8px; border-radius: 4px; outline: none; }
         #search-box button { background: #2563eb; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-
-        /* LOGO FLOTANTE */
         #muni-branding {
             position: absolute; top: 20px; right: 20px; z-index: 1000;
             background: rgba(255, 255, 255, 0.9); padding: 10px; border-radius: 10px;
             text-align: center; border: 2px solid #2563eb; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
-
-        /* ANIMACIÓN RADAR */
         .radar-dot {
             width: 12px; height: 12px; border-radius: 50%;
             border: 2px solid white; box-shadow: 0 0 10px rgba(255,255,255,0.8);
@@ -35,7 +29,6 @@
             50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 15px rgba(255,255,255,1); }
             100% { transform: scale(0.8); opacity: 0.5; }
         }
-
         .nicho-popup { text-align: center; color: #1e293b; }
         .nicho-popup img { width: 110px; margin-top: 10px; border: 1px solid #ccc; background: #fff; padding: 3px; }
     </style>
@@ -102,12 +95,28 @@
         function buscar() {
             var val = document.getElementById('target-nicho').value.trim().toUpperCase();
             if (markers[val]) {
-                map.setView(markers[val].getLatLng(), 21);
+                map.flyTo(markers[val].getLatLng(), 21, { duration: 1.5 });
                 markers[val].openPopup();
             }
         }
 
-        if (puntos.length > 0) { map.fitBounds(L.latLngBounds(puntos)); }
+        // --- LÓGICA DE VUELO AUTOMÁTICO DESDE ADMIN ---
+        window.onload = function() {
+            const params = new URLSearchParams(window.location.search);
+            const lat = params.get('lat');
+            const lng = params.get('lng');
+            const cod = params.get('codigo');
+
+            if (lat && lng) {
+                // Si viene del Admin, vuela directo a las coordenadas
+                map.flyTo([lat, lng], 21, { duration: 2 });
+                if (cod && markers[cod]) {
+                    markers[cod].openPopup();
+                }
+            } else if (puntos.length > 0) {
+                map.fitBounds(L.latLngBounds(puntos));
+            }
+        };
     </script>
 </body>
 </html>
