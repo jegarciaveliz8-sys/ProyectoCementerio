@@ -1,92 +1,116 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Ficha Técnica - {{ nicho.codigo }}</title>
+    <title>FICHA TÉCNICA - MUNI SANARATE</title>
     <style>
-        @media print {
-            .no-print { display: none; }
-            body { background: white; }
-            .ticket { box-shadow: none; border: 1px solid #ccc; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; color: #333; }
+        
+        /* MEMBRETE */
+        .header { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            border-bottom: 2px solid #000; 
+            padding-bottom: 15px; 
+            margin-bottom: 30px; 
         }
-        body { font-family: 'Arial', sans-serif; background: #f0f0f0; display: flex; justify-content: center; padding: 20px; }
-        .ticket { background: white; width: 21cm; min-height: 14cm; padding: 40px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1); position: relative; border-top: 10px solid #27ae60; }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 30px; }
-        .muni-info h1 { margin: 0; font-size: 1.4rem; color: #2c3e50; }
-        .muni-info p { margin: 2px 0; color: #7f8c8d; font-size: 0.9rem; }
-        .content { display: grid; grid-template-columns: 1fr 200px; gap: 30px; }
-        .data-field { margin-bottom: 15px; border-bottom: 1px solid #f9f9f9; padding-bottom: 5px; }
-        .label { font-size: 0.75rem; color: #95a5a6; text-transform: uppercase; font-weight: bold; }
-        .value { font-size: 1.1rem; color: #2c3e50; font-weight: bold; }
-        .qr-section { text-align: center; border: 1px solid #eee; padding: 15px; border-radius: 10px; }
-        .qr-section img { width: 150px; height: 150px; }
-        .footer-note { margin-top: 40px; font-size: 0.8rem; color: #bdc3c7; text-align: center; border-top: 1px dashed #eee; padding-top: 20px; }
-        .stamp { position: absolute; right: 50px; bottom: 80px; opacity: 0.1; transform: rotate(-20deg); font-size: 4rem; color: #27ae60; font-weight: bold; border: 8px solid #27ae60; padding: 10px; border-radius: 20px; pointer-events: none; }
+        .logo-container { flex: 0 0 100px; }
+        .muni-logo { width: 90px; }
+        .title-container { flex: 1; text-align: center; }
+        .title-container h1 { margin: 0; font-size: 24px; color: #1a365d; }
+        .title-container h2 { margin: 0; font-size: 16px; color: #4a5568; }
+
+        /* CONTENIDO */
+        .main-content { display: flex; gap: 40px; margin-top: 20px; }
+        .data-sheet { flex: 2; }
+        .data-sheet table { width: 100%; border-collapse: collapse; }
+        .data-sheet th, .data-sheet td { 
+            text-align: left; 
+            padding: 12px; 
+            border-bottom: 1px solid #edf2f7; 
+        }
+        .data-sheet th { background-color: #f7fafc; color: #2d3748; width: 40%; }
+
+        .qr-side { flex: 1; text-align: center; border: 1px solid #e2e8f0; padding: 20px; border-radius: 10px; }
+        .qr-side img { width: 180px; height: 180px; }
+
+        /* AREA DE FIRMAS */
+        .signature-section { 
+            margin-top: 80px; 
+            display: flex; 
+            justify-content: space-around; 
+            text-align: center; 
+        }
+        .sig-box { border-top: 1px solid #000; width: 250px; padding-top: 10px; font-size: 14px; font-weight: bold; }
+
+        .footer { 
+            margin-top: 50px; 
+            font-size: 10px; 
+            text-align: center; 
+            color: #718096; 
+            font-style: italic; 
+        }
+        
+        @media print {
+            body { padding: 0; }
+            .no-print { display: none; }
+        }
     </style>
 </head>
 <body>
-    <div class="ticket">
-        <div class="header">
-            <div class="muni-info">
-                <h1>MUNICIPALIDAD DE SANARATE</h1>
-                <p>Departamento de Servicios Públicos</p>
-                <p>Sistema de Información Geográfica de Cementerios (G.I.S.)</p>
-            </div>
-            <div style="text-align: right;">
-                <div style="font-size: 1.5rem; font-weight: bold; color: #27ae60;">{{ nicho.codigo }}</div>
-                <div class="label">ID Registro: #{{ nicho.id }}</div>
-            </div>
+
+    <div class="no-print" style="margin-bottom: 20px; text-align: right;">
+        <button onclick="window.print()" style="padding: 10px 20px; background: #2b6cb0; color: white; border: none; border-radius: 5px; cursor: pointer;">🖨️ IMPRIMIR DOCUMENTO</button>
+    </div>
+
+    <div class="header">
+        <div class="logo-container">
+            <img src="{% static 'img/logo_muni.png' %}" class="muni-logo" onerror="this.src='https://via.placeholder.com/90?text=MUNI'">
         </div>
-
-        <div class="content">
-            <div class="info-main">
-                <div class="data-field">
-                    <div class="label">Nombre del Difunto / Ocupante</div>
-                    <div class="value">{{ nicho.nombre_difunto|default:"ESPACIO DISPONIBLE" }}</div>
-                </div>
-                <div class="data-field">
-                    <div class="label">Propietario Legal</div>
-                    <div class="value">{{ nicho.propietario|default:"MUNICIPALIDAD DE SANARATE" }}</div>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                    <div class="data-field">
-                        <div class="label">Monto de Arbitrio</div>
-                        <div class="value">Q{{ nicho.monto_arbitrio }}</div>
-                    </div>
-                    <div class="data-field">
-                        <div class="label">Estado de Exhumación</div>
-                        <div class="value">{% if nicho.esta_exhumado %}SÍ (EXHUMADO){% else %}NO (OCUPADO){% endif %}</div>
-                    </div>
-                </div>
-                <div class="data-field">
-                    <div class="label">Coordenadas G.P.S.</div>
-                    <div class="value">{{ nicho.lat }}, {{ nicho.lng }}</div>
-                </div>
-            </div>
-
-            <div class="qr-section">
-                <div class="label" style="margin-bottom: 10px;">Validación Digital</div>
-                {% if nicho.qr_code %}
-                    <img src="{{ nicho.qr_code.url }}" alt="QR Nicho">
-                {% else %}
-                    <div style="height:150px; display:flex; align-items:center; justify-content:center; background:#f9f9f9; color:#ccc;">Sin QR</div>
-                {% endif %}
-                <p style="font-size: 0.7rem; color: #7f8c8d; margin-top: 10px;">Escanee para ver ubicación en el mapa interactivo</p>
-            </div>
-        </div>
-
-        <div class="stamp">OFICIAL</div>
-
-        <div class="footer-note">
-            Este documento es una constancia digital generada por el S.I.T. de Sanarate el {% now "d/m/Y H:i" %}.<br>
-            Cualquier alteración anula la validez de este registro.
-        </div>
-
-        <div class="no-print" style="margin-top: 30px; text-align: center;">
-            <button onclick="window.print()" style="background: #27ae60; color: white; border: none; padding: 12px 25px; border-radius: 5px; cursor: pointer; font-weight: bold;">
-                <i class="fas fa-print"></i> IMPRIMIR FICHA OFICIAL
-            </button>
+        <div class="title-container">
+            <h1>MUNICIPALIDAD DE SANARATE</h1>
+            <h2>ADMINISTRACIÓN DEL CEMENTERIO MUNICIPAL</h2>
+            <p style="margin: 5px 0 0 0; font-weight: bold;">FICHA DE REGISTRO TÉCNICO G.I.S.</p>
         </div>
     </div>
+
+    <div class="main-content">
+        <div class="data-sheet">
+            <table>
+                <tr><th>CÓDIGO DE NICHO</th><td><strong>{{ nicho.codigo }}</strong></td></tr>
+                <tr><th>DIFUNTO</th><td>{{ nicho.nombre_difunto|default:"DIFUNTO NO REGISTRADO / DISPONIBLE" }}</td></tr>
+                <tr><th>ESTADO DE PAGO</th><td>{% if nicho.monto_arbitrio > 0 %}SOLVENTE (Q.{{ nicho.monto_arbitrio }}){% else %}<span style="color:red;">PENDIENTE DE PAGO / EN MORA</span>{% endif %}</td></tr>
+                <tr><th>UBICACIÓN GPS</th><td>{{ nicho.lat }}, {{ nicho.lng }}</td></tr>
+                <tr><th>FECHA DE EMISIÓN</th><td>{% now "d \d\e F \d\e Y" %}</td></tr>
+            </table>
+        </div>
+        
+        <div class="qr-side">
+            <p style="margin-top:0; font-size: 12px; font-weight: bold;">VALIDACIÓN ELECTRÓNICA</p>
+            {% if nicho.qr_code %}
+                <img src="{{ nicho.qr_code.url }}">
+            {% endif %}
+            <p style="font-size: 10px; color: #666;">Escanee para verificar autenticidad en el sistema</p>
+        </div>
+    </div>
+
+    <div class="signature-section">
+        <div class="sig-box">
+            ENCARGADO DE CEMENTERIO<br>
+            Muni Sanarate
+        </div>
+        <div class="sig-box">
+            SELLO DE RECEPCIÓN Y CAJA<br>
+            Tesoreria Municipal
+        </div>
+    </div>
+
+    <div class="footer">
+        Documento generado automáticamente por el Sistema de Información Geográfica (G.I.S.) del Cementerio de Sanarate. 
+        Este registro no tiene validez si presenta tachaduras o enmiendas.
+    </div>
+
 </body>
 </html>

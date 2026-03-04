@@ -4,15 +4,10 @@ from django.db.models import Sum
 from .models import Nicho
 
 def dashboard(request):
-    # --- CÁLCULOS ESTADÍSTICOS (Nivel Mundial) ---
     total = Nicho.objects.count()
-    # Consideramos ocupados los que tienen nombre de difunto
     ocupados = Nicho.objects.exclude(nombre_difunto__isnull=True).exclude(nombre_difunto="").count()
     disponibles = total - ocupados
-    
-    # Mora: Nichos con difunto que tienen Q0.00 de arbitrio
     mora_count = Nicho.objects.filter(monto_arbitrio__lte=0).exclude(nombre_difunto="").count()
-    # Recaudación: Suma de todos los montos pagados
     recaudado = Nicho.objects.aggregate(Sum('monto_arbitrio'))['monto_arbitrio__sum'] or 0
     
     context = {
@@ -47,3 +42,8 @@ def datos_nichos_json(request):
 def imprimir_ficha(request, nicho_id):
     nicho = get_object_or_404(Nicho, id=nicho_id)
     return render(request, 'registros/ficha_impresion.html', {'nicho': nicho})
+
+def imprimir_todos_qrs(request):
+    # Traemos solo los nichos que tienen un QR generado
+    nichos = Nicho.objects.exclude(qr_code__isnull=True).exclude(qr_code='')
+    return render(request, 'registros/imprimir_qrs.html', {'nichos': nichos})
