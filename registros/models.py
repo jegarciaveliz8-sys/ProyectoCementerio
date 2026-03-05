@@ -1,8 +1,11 @@
 from django.db import models
 from auditlog.registry import auditlog
 import qrcode
+import hashlib
 from io import BytesIO
 from django.core.files import File
+from django.utils import timezone
+from datetime import timedelta
 
 class Nicho(models.Model):
     codigo = models.CharField(max_length=50, unique=True)
@@ -22,26 +25,48 @@ class Nicho(models.Model):
     def __str__(self):
         return f"{self.codigo} - {self.nombre_difunto or 'Disponible'}"
 
-    # --- MOTOR DE GENERACIÓN AUTOMÁTICA DE QR ---
+    # --- SEGURIDAD CRIPTOGRÁFICA (Nivel Mundial) ---
+    def generar_sello_seguridad(self):
+        """Crea un código único para validar la autenticidad del Título."""
+        seed = f"{self.codigo}-{self.propietario}-{self.fecha_vencimiento}"
+        return hashlib.sha256(seed.encode()).hexdigest()[:16].upper()
+
+    # --- SEMÁFORO LEGAL DE EXHUMACIÓN ---
+    @property
+    def semaforo_estado(self):
+        """Lógica de control para la Municipalidad."""
+        if self.esta_exhumado:
+            return {'estado': 'EXHUMADO', 'color': '#6c757d', 'prioridad': 0}
+        if not self.fecha_vencimiento:
+            return {'estado': 'SIN FECHA', 'color': '#17a2b8', 'prioridad': 0}
+        
+        hoy = timezone.now().date()
+        mora = hoy - self.fecha_vencimiento
+
+        if mora.days <= 0:
+            return {'estado': 'AL DÍA', 'color': '#28a745', 'prioridad': 1}
+        elif 0 < mora.days <= 90:
+            return {'estado': 'MORA RECIENTE', 'color': '#ffc107', 'prioridad': 2}
+        elif 90 < mora.days <= 365:
+            return {'estado': 'PRE-EXHUMACIÓN', 'color': '#fd7e14', 'prioridad': 3}
+        else:
+            return {'estado': 'SUJETO A EXHUMACIÓN', 'color': '#dc3545', 'prioridad': 4}
+
+    # --- MOTOR DE QR ENRIQUECIDO ---
     def save(self, *args, **kwargs):
-        # Si no tiene QR, lo generamos automáticamente
         if not self.qr_code:
-            # Creamos el QR con el código del nicho
-            # Esto puede ser una URL o solo el código
-            qr_data = f"Nicho: {self.codigo} | Propietario: {self.propietario}"
+            sello = self.generar_sello_seguridad()
+            # El QR ahora incluye el sello de seguridad para validación
+            qr_data = f"ID: {self.codigo} | Sello: {sello}"
             qr = qrcode.QRCode(version=1, box_size=10, border=5)
             qr.add_data(qr_data)
             qr.make(fit=True)
-            
             img = qr.make_image(fill='black', back_color='white')
             buffer = BytesIO()
             img.save(buffer, format='PNG')
-            
-            # Guardamos el archivo generado en el campo qr_code
             filename = f'qr_{self.codigo}.png'
             self.qr_code.save(filename, File(buffer), save=False)
-            
         super().save(*args, **kwargs)
 
-# REGISTRO DEL ESPÍA (Auditoría)
+# Registro de Auditoría
 auditlog.register(Nicho)

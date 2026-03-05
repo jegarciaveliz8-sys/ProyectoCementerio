@@ -72,3 +72,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+
+# --- CONFIGURACIÓN PARA NGROK ---
+CSRF_TRUSTED_ORIGINS = ['https://uninferentially-fibrillar-ward.ngrok-free.dev']

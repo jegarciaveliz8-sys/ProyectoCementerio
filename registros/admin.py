@@ -6,10 +6,12 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
+from django.urls import reverse
 
 @admin.register(Nicho)
 class NichoAdmin(admin.ModelAdmin):
-    list_display = ('codigo', 'nombre_difunto', 'propietario', 'status_financiero', 'indicador_tiempo', 'consola_tecnologica')
+    # Agregamos 'estado_legal' a la vista principal
+    list_display = ('codigo', 'nombre_difunto', 'propietario', 'status_financiero', 'estado_legal', 'consola_tecnologica')
     list_editable = ('nombre_difunto', 'propietario')
     search_fields = ('codigo', 'nombre_difunto', 'propietario')
     ordering = ('id',)
@@ -23,27 +25,33 @@ class NichoAdmin(admin.ModelAdmin):
     
     actions = ['exportar_a_csv', 'marcar_exhumado_masivo']
 
+    # --- NUEVO: SEMÁFORO LEGAL DE EXHUMACIÓN (Nivel Mundial) ---
+    def estado_legal(self, obj):
+        info = obj.semaforo_estado 
+        return format_html(
+            '<span style="background: {}; color: white; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; text-transform: uppercase;">{}</span>',
+            info['color'],
+            info['estado']
+        )
+    estado_legal.short_description = "Estado Legal"
+
     def status_financiero(self, obj):
         if obj.monto_arbitrio > 0:
             return format_html('<b style="color:#28a745;">✅ Q{}</b>', obj.monto_arbitrio)
         return mark_safe('<b style="color:#dc3545;">🚨 MORA</b>')
     status_financiero.short_description = "Finanzas"
 
-    def indicador_tiempo(self, obj):
-        if not obj.fecha_vencimiento: 
-            return mark_safe('<span style="color:#f39c12;">SIN FECHA</span>')
-        dias = (obj.fecha_vencimiento - timezone.now().date()).days
-        color = "#28a745" if dias > 0 else "#dc3545"
-        return format_html('<b style="color:{};">{} días</b>', color, dias)
-    indicador_tiempo.short_description = "Vencimiento"
-
-    # 🛰️ AQUÍ ESTÁ LA MEJORA DEL RADAR
+    # 🛰️ CONSOLA TECNOLÓGICA MEJORADA (Con Título Blindado)
     def consola_tecnologica(self, obj):
         links = []
-        links.append(format_html('<a href="/imprimir/{}/" target="_blank" title="Ficha" style="text-decoration:none; font-size:18px;">📄</a>', obj.id))
+        # Icono de Ficha Técnica
+        links.append(format_html('<a href="/imprimir/{}/" target="_blank" title="Ficha Técnica" style="text-decoration:none; font-size:18px;">📄</a>', obj.id))
         
+        # Icono de Título de Propiedad Oficial
+        url_titulo = reverse('generar_titulo_propiedad', args=[obj.id])
+        links.append(format_html('<a href="{}" target="_blank" title="Generar Título Oficial" style="text-decoration:none; margin-left:10px; font-size:18px;">📜</a>', url_titulo))
+
         if obj.lat and obj.lng:
-            # Mandamos coordenadas + zoom nivel 20 + código para el radar
             links.append(format_html(
                 '<a href="/mapa/?lat={}&lng={}&z=20&codigo={}&zoom=true" '
                 'title="Ubicar en Radar" '
@@ -53,6 +61,7 @@ class NichoAdmin(admin.ModelAdmin):
         return mark_safe(f'<div style="display:flex; align-items:center; justify-content:center;">{" ".join(links)}</div>')
     consola_tecnologica.short_description = "Acciones G.I.S."
 
+    # --- DASHBOARD SUPERIOR ---
     def changelist_view(self, request, extra_context=None):
         qs = self.get_queryset(request).aggregate(
             p=Sum('monto_arbitrio'), 

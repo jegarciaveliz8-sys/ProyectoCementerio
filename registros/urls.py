@@ -5,13 +5,16 @@ urlpatterns = [
     # 📊 PORTADA: El Dashboard con gráficas
     path('', views.dashboard, name='dashboard'),
     
-    # 🛰️ MAPA: El sistema G.I.S. interactivo con Radar y Buscador
-    path('mapa/', views.mapa_cimenterio, name='mapa_nichos'),
+    # 🛰️ MAPA: El sistema G.I.S. interactivo
+    path('mapa/', views.mapa_cimenterio, name='mapa_cimenterio'),
     
     # 🔌 SERVICIOS: API e Impresión
     path('api/datos/', views.datos_nichos_json, name='datos_nichos_json'),
     path('imprimir/<int:nicho_id>/', views.imprimir_ficha, name='imprimir_ficha'),
     
-    # 🖨️ IMPRESIÓN MASIVA: Generador de etiquetas QR para el cementerio
+    # 🖨️ IMPRESIÓN MASIVA
     path('imprimir-qrs/', views.imprimir_todos_qrs, name='imprimir_qrs'),
+
+    # 📜 TÍTULO DE PROPIEDAD PROFESIONAL (Esta es la que faltaba)
+    path('nicho/<int:nicho_id>/titulo/', views.generar_titulo_propiedad, name='generar_titulo_propiedad'),
 ]

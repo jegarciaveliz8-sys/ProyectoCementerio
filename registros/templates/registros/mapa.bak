@@ -1,0 +1,113 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>RADAR G.I.S. SANARATE</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body, html, #map { height: 100%; margin: 0; background: #000; font-family: sans-serif; overflow: hidden; }
+
+        /* BUSCADOR */
+        #search-box {
+            position: absolute; top: 20px; left: 50px; z-index: 1000;
+            background: rgba(15, 23, 42, 0.95); padding: 12px; border-radius: 8px;
+            border: 2px solid #3b82f6; display: flex; gap: 10px;
+        }
+        #search-box input { background: #1e293b; border: 1px solid #334155; color: #fff; padding: 8px; border-radius: 4px; outline: none; }
+        #search-box button { background: #2563eb; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+
+        /* LOGO FLOTANTE */
+        #muni-branding {
+            position: absolute; top: 20px; right: 20px; z-index: 1000;
+            background: rgba(255, 255, 255, 0.9); padding: 10px; border-radius: 10px;
+            text-align: center; border: 2px solid #2563eb; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        /* ANIMACIÓN RADAR */
+        .radar-dot {
+            width: 12px; height: 12px; border-radius: 50%;
+            border: 2px solid white; box-shadow: 0 0 10px rgba(255,255,255,0.8);
+            animation: blink 1.5s infinite ease-in-out;
+        }
+        @keyframes blink {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 15px rgba(255,255,255,1); }
+            100% { transform: scale(0.8); opacity: 0.5; }
+        }
+
+        .nicho-popup { text-align: center; color: #1e293b; }
+        .nicho-popup img { width: 110px; margin-top: 10px; border: 1px solid #ccc; background: #fff; padding: 3px; }
+    </style>
+</head>
+<body>
+
+    <div id="search-box">
+        <input type="text" id="target-nicho" placeholder="Código (A1-5-036)">
+        <button onclick="buscar()">🛰️ RADAR</button>
+    </div>
+
+    <div id="muni-branding">
+        <img src="{% static 'img/logo_muni.png' %}" style="width: 50px;" onerror="this.style.display='none'">
+        <div style="font-size: 10px; font-weight: bold; color: #1e3a8a; margin-top: 5px;">SANARATE G.I.S.</div>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        var map = L.map('map', { zoomControl: false }).setView([14.7821, -90.2049], 19);
+        
+        L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+            maxZoom: 22, subdomains:['mt0','mt1','mt2','mt3']
+        }).addTo(map);
+
+        var markers = {};
+        var puntos = [];
+
+        {% for n in nichos %}
+            {% if n.lat and n.lng %}
+                (function() {
+                    var lat = parseFloat("{{ n.lat }}".replace(',', '.'));
+                    var lng = parseFloat("{{ n.lng }}".replace(',', '.'));
+                    var cod = "{{ n.codigo }}";
+                    var color = "{% if n.monto_arbitrio > 0 %}#10b981{% else %}#ef4444{% endif %}";
+
+                    var radarIcon = L.divIcon({
+                        className: 'custom-div-icon',
+                        html: '<div class="radar-dot" style="background-color: ' + color + ';"></div>',
+                        iconSize: [15, 15], iconAnchor: [7, 7]
+                    });
+
+                    var m = L.marker([lat, lng], { icon: radarIcon }).addTo(map);
+
+                    m.bindPopup(`
+                        <div class="nicho-popup">
+                            <h3>${cod}</h3>
+                            <p><b>Difunto:</b> {{ n.nombre_difunto|default:"DISPONIBLE" }}</p>
+                            {% if n.qr_code %}
+                                <img src="{{ n.qr_code.url }}">
+                            {% endif %}
+                            <br><br>
+                            <a href="/imprimir/{{ n.id }}/" target="_blank" style="color:#2563eb; font-weight:bold;">IMPRIMIR FICHA</a>
+                        </div>
+                    `);
+
+                    markers[cod] = m;
+                    puntos.push([lat, lng]);
+                })();
+            {% endif %}
+        {% endfor %}
+
+        function buscar() {
+            var val = document.getElementById('target-nicho').value.trim().toUpperCase();
+            if (markers[val]) {
+                map.setView(markers[val].getLatLng(), 21);
+                markers[val].openPopup();
+            }
+        }
+
+        if (puntos.length > 0) { map.fitBounds(L.latLngBounds(puntos)); }
+    </script>
+</body>
+</html>
