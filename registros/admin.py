@@ -17,69 +17,72 @@ class NichoResource(resources.ModelResource):
 @admin.register(Nicho)
 class NichoAdmin(ImportExportModelAdmin):
     resource_class = NichoResource
+    # 1. Regresamos los nombres de columnas correctos
     list_display = ('codigo', 'nombre_difunto', 'propietario', 'status_financiero', 'estado_legal', 'consola_tecnologica')
     list_editable = ('nombre_difunto', 'propietario')
     search_fields = ('codigo', 'nombre_difunto', 'propietario')
-    ordering = ('id',)
-    list_per_page = 50 # Hace que el panel cargue más rápido
+    
+    # 2. Regresamos al orden original para que no se desordene Sanarate
+    ordering = ('id',) 
+    list_per_page = 50 
     
     list_filter = ('esta_exhumado', 'monto_arbitrio', ('fecha_vencimiento', admin.DateFieldListFilter), 'fecha_pago')
     
-    # Nueva acción rápida
     actions = ['exportar_a_excel_veloz', 'marcar_exhumado_masivo']
 
-    @admin.action(description="🚀 Exportar Excel Rápido")
-    def exportar_a_excel_veloz(self, request, queryset):
-        response = HttpResponse(content_type='application/ms-excel')
-        response['Content-Disposition'] = 'attachment; filename="Sanarate_Reporte.xls"'
-        
-        wb = xlwt.Workbook(encoding='utf-8')
-        ws = wb.add_sheet('Nichos')
-
-        # Estilo para el encabezado
-        font_style = xlwt.XFStyle()
-        font_style.font.bold = True
-
-        columns = ['Codigo', 'Nombre Difunto', 'Propietario', 'Monto Arbitrio', 'Vencimiento']
-
-        for col_num in range(len(columns)):
-            ws.write(0, col_num, columns[col_num], font_style)
-
-        # Datos
-        font_style = xlwt.XFStyle()
-        rows = queryset.values_list('codigo', 'nombre_difunto', 'propietario', 'monto_arbitrio', 'fecha_vencimiento')
-        
-        for row_num, row in enumerate(rows, 1):
-            for col_num, cell_value in enumerate(row):
-                # Convertir fecha a string para evitar líos
-                if hasattr(cell_value, 'isoformat'):
-                    cell_value = cell_value.strftime('%d/%m/%Y')
-                ws.write(row_num, col_num, cell_value, font_style)
-
-        wb.save(response)
-        return response
-
+    # --- TUS FUNCIONES VISUALES (Restauradas) ---
     def estado_legal(self, obj):
         info = obj.semaforo_estado 
-        return format_html('<span style="background:{}; color:white; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold;">{}</span>', info['color'], info['estado'])
+        return format_html('<span style="background:{}; color:white; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; text-transform:uppercase;">{}</span>', info['color'], info['estado'])
+    estado_legal.short_description = "Estado Legal"
 
     def status_financiero(self, obj):
         if obj.monto_arbitrio > 0:
             return format_html('<b style="color:#28a745;">✅ Q{}</b>', obj.monto_arbitrio)
         return mark_safe('<b style="color:#dc3545;">🚨 MORA</b>')
+    status_financiero.short_description = "Finanzas"
 
     def consola_tecnologica(self, obj):
         links = []
         links.append(format_html('<a href="/imprimir/{}/" target="_blank" title="Ficha" style="text-decoration:none; font-size:18px;">📄</a>', obj.id))
         links.append(format_html('<a href="{}" target="_blank" title="Título" style="text-decoration:none; margin-left:10px; font-size:18px;">📜</a>', reverse('generar_titulo_propiedad', args=[obj.id])))
+        
+        # EL VUELO: Ahora solo si existen coordenadas, y sin romper lo visual
         if obj.lat and obj.lng:
-            links.append(format_html('<a href="/mapa/?lat={}&lng={}&z=20" title="Mapa" style="text-decoration:none; margin-left:10px; font-size:18px;">📍</a>', obj.lat, obj.lng))
-        return mark_safe(f'<div style="display:flex; justify-content:center;">{" ".join(links)}</div>')
+            url_vuelo = f"/mapa/?lat={obj.lat}&lng={obj.lng}&z=21&codigo={obj.codigo}&popup=true"
+            links.append(format_html(
+                '<a href="{}" target="_blank" title="Mapa" style="text-decoration:none; margin-left:10px; font-size:18px;">📍</a>', 
+                url_vuelo
+            ))
+        return mark_safe(f'<div style="display:flex; justify-content:center; align-items:center;">{" ".join(links)}</div>')
+    consola_tecnologica.short_description = "Acciones G.I.S."
 
+    # --- EXPORTADOR VELOZ ---
+    @admin.action(description="🚀 Exportar Excel Rápido")
+    def exportar_a_excel_veloz(self, request, queryset):
+        response = HttpResponse(content_type='application/ms-excel')
+        response['Content-Disposition'] = 'attachment; filename="Sanarate_Reporte.xls"'
+        wb = xlwt.Workbook(encoding='utf-8')
+        ws = wb.add_sheet('Nichos')
+        for i, col in enumerate(['Codigo', 'Difunto', 'Propietario', 'Monto']):
+            ws.write(0, i, col)
+        for r, obj in enumerate(queryset, 1):
+            ws.write(r, 0, obj.codigo); ws.write(r, 1, obj.nombre_difunto); ws.write(r, 2, obj.propietario); ws.write(r, 3, obj.monto_arbitrio)
+        wb.save(response)
+        return response
+
+    # --- DASHBOARD SUPERIOR (Restaurado) ---
     def changelist_view(self, request, extra_context=None):
         qs = self.get_queryset(request).aggregate(p=Sum('monto_arbitrio'), m=Count('id', filter=Q(monto_arbitrio=0)), t=Count('id'))
         extra_context = extra_context or {}
-        extra_context['title'] = format_html('<div style="background:#111827; padding:20px; border-radius:12px; color:white; display:flex; gap:50px; margin-bottom:20px;"><div><small style="color:#9ca3af;">💰 RECAUDACIÓN</small><br><span style="color:#4ade80; font-size:24px; font-weight:bold;">Q{}</span></div><div><small style="color:#9ca3af;">🚨 MORA</small><br><span style="color:#f87171; font-size:24px; font-weight:bold;">{}</span></div><div><small style="color:#9ca3af;">📊 TOTAL</small><br><span style="font-size:24px; font-weight:bold;">{}</span></div></div>', qs['p'] or 0, qs['m'], qs['t'])
+        extra_context['title'] = format_html(
+            '<div style="background:#111827; padding:20px; border-radius:12px; color:white; display:flex; gap:50px; border-bottom:5px solid #374151; margin-bottom:20px;">'
+            '<div><small style="color:#9ca3af; font-weight:bold;">💰 RECAUDACIÓN</small><br><span style="font-size:24px; font-weight:bold; color:#4ade80;">Q{}</span></div>'
+            '<div><small style="color:#9ca3af; font-weight:bold;">🚨 EN MORA</small><br><span style="font-size:24px; font-weight:bold; color:#f87171;">{} Nichos</span></div>'
+            '<div><small style="color:#9ca3af; font-weight:bold;">📊 TOTAL</small><br><span style="font-size:24px; font-weight:bold;">{}</span></div>'
+            '</div>', 
+            qs['p'] or 0, qs['m'], qs['t']
+        )
         return super().changelist_view(request, extra_context=extra_context)
 
     @admin.action(description="🏴 Marcar como Exhumado")
