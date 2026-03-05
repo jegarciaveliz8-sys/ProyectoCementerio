@@ -92,3 +92,21 @@ def generar_titulo_propiedad(request, nicho_id):
     p.showPage(); p.save()
     buffer.seek(0)
     return HttpResponse(buffer, content_type='application/pdf')
+
+def consulta_publica(request, codigo):
+    nicho = get_object_or_404(Nicho, codigo=codigo)
+    
+    # Lógica de semáforo: Mora por arbitrio o por fecha vencida
+    es_moroso = nicho.monto_arbitrio <= 0
+    dias_vencido = 0
+    if nicho.fecha_vencimiento and nicho.fecha_vencimiento < timezone.now().date():
+        dias_vencido = (timezone.now().date() - nicho.fecha_vencimiento).days
+        es_moroso = True  # Si la fecha ya pasó, también es mora
+
+    context = {
+        'nicho': nicho,
+        'es_moroso': es_moroso,
+        'dias_vencido': dias_vencido,
+        'fecha_servidor': timezone.now(),
+    }
+    return render(request, 'registros/consulta_inspector.html', context)

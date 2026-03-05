@@ -17,4 +17,5 @@ urlpatterns = [
 
     # 📜 TÍTULO DE PROPIEDAD PROFESIONAL (Esta es la que faltaba)
     path('nicho/<int:nicho_id>/titulo/', views.generar_titulo_propiedad, name='generar_titulo_propiedad'),
+    path('consultar/<str:codigo>/', views.consulta_publica, name='consulta_publica'),
 ]

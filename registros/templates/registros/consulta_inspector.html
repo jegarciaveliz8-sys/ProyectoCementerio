@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inspector G.I.S. - Sanarate</title>
+    <style>
+        body { font-family: sans-serif; margin: 0; padding: 0; text-align: center; 
+               background-color: {% if es_moroso %} #ffeded {% else %} #f0fff0 {% endif %}; }
+        .card { margin: 20px; padding: 20px; border-radius: 15px; background: white; 
+                box-shadow: 0 4px 8px rgba(0,0,0,0.2); border: 2px solid {% if es_moroso %} #d9534f {% else %} #5cb85c {% endif %}; }
+        .status-badge { padding: 15px; border-radius: 10px; font-weight: bold; font-size: 1.5em; 
+                        color: white; margin-bottom: 20px; }
+        .moroso { background-color: #d9534f; }
+        .solvente { background-color: #5cb85c; }
+        .info { text-align: left; font-size: 1.1em; line-height: 1.6; }
+        .info b { color: #555; }
+        .footer { font-size: 0.8em; color: #888; margin-top: 30px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>CONSULTA DE NICHO</h2>
+        <div class="status-badge {% if es_moroso %} moroso {% else %} solvente {% endif %}">
+            {% if es_moroso %} ⚠️ MORA DETECTADA {% else %} ✅ SOLVENTE {% endif %}
+        </div>
+        
+        <div class="info">
+            <p><b>Código:</b> {{ nicho.codigo }}</p>
+            <p><b>Propietario:</b> {{ nicho.propietario }}</p>
+            <p><b>Difunto:</b> {{ nicho.nombre_difunto }}</p>
+            <p><b>Estado de Pago:</b> {% if es_moroso %} Pendiente de Pago {% else %} Al Día {% endif %}</p>
+            {% if dias_vencido > 0 %}
+                <p style="color: red;"><b>Días de retraso:</b> {{ dias_vencido }} días</p>
+            {% endif %}
+        </div>
+    </div>
+    <div class="footer">
+        Municipalidad de Sanarate - Departamento de Cementerios<br>
+        Hora de consulta: {{ fecha_servidor|date:"H:i:s" }}
+    </div>
+</body>
+</html>
