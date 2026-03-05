@@ -14,6 +14,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'import_export',  # <--- SE AGREGA ESTA LÍNEA
     'registros',
     'auditlog',
 ]
@@ -68,10 +69,11 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# --- CONFIGURACIÓN DE MEDIOS LOCAL (PARA TUS 9,998 QRs) ---
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 
-# --- CONFIGURACIÓN PARA NGROK ---
 CSRF_TRUSTED_ORIGINS = ['https://uninferentially-fibrillar-ward.ngrok-free.dev']
+
+# Configuración necesaria para Import/Export
+IMPORT_EXPORT_USE_TRANSACTIONS = True
