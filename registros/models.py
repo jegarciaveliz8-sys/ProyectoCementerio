@@ -2,6 +2,7 @@ from django.db import models
 from auditlog.registry import auditlog
 import qrcode
 import hashlib
+import os
 from io import BytesIO
 from django.core.files import File
 from django.utils import timezone
@@ -47,20 +48,27 @@ class Nicho(models.Model):
             return {'estado': 'SUJETO A EXHUMACIÓN', 'color': '#dc3545', 'prioridad': 4}
 
     def save(self, *args, **kwargs):
-        if not self.qr_code:
-            sello = self.generar_sello_seguridad()
-            qr_data = f"ID: {self.codigo} | Sello: {sello}"
-            qr = qrcode.QRCode(version=1, box_size=10, border=5)
-            qr.add_data(qr_data)
-            qr.make(fit=True)
-            img = qr.make_image(fill='black', back_color='white')
-            buffer = BytesIO()
-            img.save(buffer, format='PNG')
-            filename = f'qr_{self.codigo}.png'
-            self.qr_code.save(filename, File(buffer), save=False)
+        # 1. Preparar la data del QR
+        sello = self.generar_sello_seguridad()
+        qr_text = f"ID: {self.codigo} | Difunto: {self.nombre_difunto or 'N/A'} | Sello: {sello}"
+        
+        # 2. Generar la imagen del QR en memoria
+        qr = qrcode.QRCode(version=1, box_size=10, border=5)
+        qr.add_data(qr_text)
+        qr.make(fit=True)
+        img = qr.make_image(fill='black', back_color='white')
+        
+        buffer = BytesIO()
+        img.save(buffer, format='PNG')
+        filename = f'qr_{self.codigo}.png'
+
+        # 3. Guardar el archivo QR sin disparar save() recursivo
+        # Guardamos el archivo en el campo, pero save=False es clave
+        self.qr_code.save(filename, File(buffer), save=False)
+        
+        # 4. Guardado final de la base de datos
         super().save(*args, **kwargs)
 
-# NUEVO MODELO DE REPORTES
 class ReporteDano(models.Model):
     ESTADOS = [('PENDIENTE', '🔴 Pendiente'), ('EN_PROCESO', '🟡 En Proceso'), ('RESUELTO', '🟢 Resuelto')]
     NIVELES = [('LEVE', 'Leve'), ('MODERADO', 'Moderado'), ('CRITICO', 'Crítico')]

@@ -29,8 +29,13 @@
             50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 15px rgba(255,255,255,1); }
             100% { transform: scale(0.8); opacity: 0.5; }
         }
-        .nicho-popup { text-align: center; color: #1e293b; }
-        .nicho-popup img { width: 110px; margin-top: 10px; border: 1px solid #ccc; background: #fff; padding: 3px; }
+        .nicho-popup { text-align: center; color: #1e293b; min-width: 160px; }
+        .nicho-popup img { width: 100px; margin-top: 10px; border: 1px solid #ccc; background: #fff; padding: 3px; }
+        .geo-data {
+            background: #1e293b; color: #4ade80; font-family: monospace; 
+            padding: 5px; border-radius: 4px; font-size: 10px; margin-top: 8px;
+            text-align: left; border: 1px solid #334155;
+        }
     </style>
 </head>
 <body>
@@ -57,7 +62,7 @@
 
         var markers = {};
         var puntos = [];
-        var listaBusqueda = []; // LA CLAVE: Base de datos local en el navegador
+        var listaBusqueda = [];
 
         {% for n in nichos %}
             {% if n.lat and n.lng %}
@@ -79,21 +84,28 @@
 
                     m.bindPopup(`
                         <div class="nicho-popup">
-                            <h3>${cod}</h3>
-                            <p><b>Difunto:</b> ${difunto}</p>
-                            <p><b>Propietario:</b> ${propietario}</p>
+                            <h3 style="margin:0; color:#1e3a8a;">${cod}</h3>
+                            <p style="margin:5px 0; font-size:12px;"><b>Difunto:</b> ${difunto}</p>
+                            
+                            <div class="geo-data">
+                                📍 LAT: ${lat.toFixed(6)}<br>
+                                🛰️ LNG: ${lng.toFixed(6)}
+                            </div>
+
                             {% if n.qr_code %}
                                 <img src="{{ n.qr_code.url }}">
                             {% endif %}
-                            <br><br>
-                            <a href="/imprimir/{{ n.id }}/" target="_blank" style="color:#2563eb; font-weight:bold;">IMPRIMIR FICHA</a>
+                            
+                            <div style="margin-top:10px; display:flex; flex-direction:column; gap:5px;">
+                                <a href="/imprimir/{{ n.id }}/" target="_blank" style="color:#2563eb; font-size:11px; font-weight:bold; text-decoration:none;">📄 IMPRIMIR FICHA</a>
+                                <a href="https://www.google.com/maps/search/?api=1&query=${lat},${lng}" target="_blank" style="color:#059669; font-size:11px; font-weight:bold; text-decoration:none;">🚗 CÓMO LLEGAR</a>
+                            </div>
                         </div>
                     `);
 
                     markers[cod] = m;
                     puntos.push([lat, lng]);
                     
-                    // Guardamos todo en la lista local para buscar sin internet
                     listaBusqueda.push({
                         codigo: cod.toUpperCase(),
                         nombre: difunto.toUpperCase(),
@@ -107,7 +119,6 @@
             var val = document.getElementById("target-nicho").value.trim().toUpperCase();
             if (!val) return;
 
-            // BUSCADOR LOCAL (No usa internet, busca en la lista que creamos arriba)
             var encontrado = listaBusqueda.find(function(item) {
                 return item.codigo.includes(val) || 
                        item.nombre.includes(val) || 
