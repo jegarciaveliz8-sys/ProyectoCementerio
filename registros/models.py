@@ -7,6 +7,11 @@ from io import BytesIO
 from django.core.files import File
 from django.utils import timezone
 from datetime import timedelta
+from PIL import Image
+import pillow_heif  # Soporte para formatos de iPhone
+
+# Registrar el soporte para HEIC/HEIF
+pillow_heif.register_heif_opener()
 
 class Nicho(models.Model):
     codigo = models.CharField(max_length=50, unique=True)
@@ -69,8 +74,40 @@ class ReporteDano(models.Model):
     nivel_urgencia = models.CharField(max_length=10, choices=NIVELES, default='LEVE')
     estado = models.CharField(max_length=15, choices=ESTADOS, default='PENDIENTE')
     reportado_por = models.CharField(max_length=100, blank=True, null=True)
-    # CAMBIO A FILEFIELD PARA EVITAR ERRORES DE VALIDACIÓN
     foto_evidencia = models.FileField(upload_to='danos/', blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        if self.foto_evidencia:
+            try:
+                # 1. Abrimos la imagen (ahora soporta HEIC)
+                img = Image.open(self.foto_evidencia)
+                
+                # 2. Redimensionar
+                if img.height > 1200 or img.width > 1200:
+                    img.thumbnail((1200, 1200))
+                
+                # 3. Convertir a RGB (JPEG no soporta transparencia de PNG/HEIC)
+                if img.mode != 'RGB':
+                    img = img.convert('RGB')
+                
+                # 4. Guardar comprimida
+                temp_buffer = BytesIO()
+                img.save(temp_buffer, format='JPEG', quality=70)
+                temp_buffer.seek(0)
+                
+                # Cambiamos la extensión a .jpg para evitar confusiones
+                nuevo_nombre = os.path.splitext(self.foto_evidencia.name)[0] + ".jpg"
+                
+                self.foto_evidencia.save(
+                    nuevo_nombre,
+                    File(temp_buffer, name=nuevo_nombre),
+                    save=False
+                )
+            except Exception as e:
+                print(f"Error procesando imagen: {e}")
+                # Si falla la compresión, guardamos el archivo original para no perder la data
+
+        super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = "Reporte de Daño"
