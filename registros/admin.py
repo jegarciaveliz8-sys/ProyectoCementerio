@@ -1,13 +1,21 @@
 import xlwt
 from django.http import HttpResponse
 from django.contrib import admin
-from .models import Nicho
+from .models import Nicho, ReporteDano
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.db.models import Sum, Count, Q
 from django.urls import reverse
 from import_export.admin import ImportExportModelAdmin
 from import_export import resources
+
+# 1. Configuración para que las fotos aparezcan DENTRO del nicho
+class ReporteDanoInline(admin.TabularInline):
+    model = ReporteDano
+    extra = 1
+    fields = ('foto_evidencia', 'descripcion', 'estado', 'nivel_urgencia')
+    verbose_name = "Fotografía / Reporte de Campo"
+    verbose_name_plural = "Historial de Fotografías y Daños"
 
 class NichoResource(resources.ModelResource):
     class Meta:
@@ -24,6 +32,9 @@ class NichoAdmin(ImportExportModelAdmin):
     list_per_page = 50 
     list_filter = ('esta_exhumado', 'monto_arbitrio', ('fecha_vencimiento', admin.DateFieldListFilter), 'fecha_pago')
     actions = ['exportar_a_excel_veloz', 'marcar_exhumado_masivo']
+    
+    # ESTA LÍNEA UNE LOS DOS MODELOS:
+    inlines = [ReporteDanoInline]
 
     def estado_legal(self, obj):
         info = obj.semaforo_estado 
@@ -38,22 +49,10 @@ class NichoAdmin(ImportExportModelAdmin):
 
     def consola_tecnologica(self, obj):
         links = []
-        # --- 1. TÉCNICO E IDENTIFICACIÓN ---
         links.append(format_html('<a href="{}" target="_blank" title="FICHA PRO" style="text-decoration:none; font-size:18px;">💎</a>', reverse('ficha_tecnica_pro', args=[obj.id])))
         links.append(format_html('<a href="{}" target="_blank" title="Reporte Inspección" style="text-decoration:none; margin-left:8px; font-size:18px;">🔍</a>', reverse('reporte_inspeccion', args=[obj.id])))
         links.append(format_html('<a href="{}" target="_blank" title="Título de Propiedad" style="text-decoration:none; margin-left:8px; font-size:18px;">📜</a>', reverse('generar_titulo_propiedad', args=[obj.id])))
         
-        # --- 2. GESTIÓN OPERATIVA ---
-        links.append(format_html('<a href="{}" target="_blank" title="Acta de Inhumación" style="text-decoration:none; margin-left:8px; font-size:18px;">📖</a>', reverse('acta_inhumacion', args=[obj.id])))
-        links.append(format_html('<a href="{}" target="_blank" title="Permiso Construcción" style="text-decoration:none; margin-left:8px; font-size:18px;">🧱</a>', reverse('permiso_construccion', args=[obj.id])))
-        links.append(format_html('<a href="{}" target="_blank" title="Traspaso Derechos" style="text-decoration:none; margin-left:8px; font-size:18px;">✍️</a>', reverse('traspaso_derechos', args=[obj.id])))
-
-        # --- 3. LEGAL Y FINANCIERO ---
-        links.append(format_html('<a href="{}" target="_blank" title="Certificación Solvencia" style="text-decoration:none; margin-left:8px; font-size:18px;">🏅</a>', reverse('solvencia_municipal', args=[obj.id])))
-        links.append(format_html('<a href="{}" target="_blank" title="Aviso de Mora" style="text-decoration:none; margin-left:8px; font-size:18px;">✉️</a>', reverse('aviso_mora', args=[obj.id])))
-        links.append(format_html('<a href="{}" target="_blank" title="Orden Exhumación" style="text-decoration:none; margin-left:8px; font-size:18px;">🏴</a>', reverse('orden_exhumacion', args=[obj.id])))
-        
-        # --- 4. UBICACIÓN ---
         if obj.lat and obj.lng:
             url_vuelo = f"/mapa/?lat={obj.lat}&lng={obj.lng}&z=21&codigo={obj.codigo}&popup=true"
             links.append(format_html('<a href="{}" target="_blank" title="Mapa Satelital" style="text-decoration:none; margin-left:8px; font-size:18px;">📍</a>', url_vuelo))
@@ -74,87 +73,17 @@ class NichoAdmin(ImportExportModelAdmin):
         wb.save(response)
         return response
 
-    def changelist_view(self, request, extra_context=None):
-        qs = self.get_queryset(request).aggregate(p=Sum('monto_arbitrio'), m=Count('id', filter=Q(monto_arbitrio=0)), t=Count('id'))
-        extra_context = extra_context or {}
-        extra_context['title'] = format_html(
-            '<div style="background:#111827; padding:20px; border-radius:12px; color:white; display:flex; gap:50px; border-bottom:5px solid #374151; margin-bottom:20px;">'
-            '<div><small style="color:#9ca3af; font-weight:bold;">💰 RECAUDACIÓN</small><br><span style="font-size:24px; font-weight:bold; color:#4ade80;">Q{}</span></div>'
-            '<div><small style="color:#9ca3af; font-weight:bold;">🚨 EN MORA</small><br><span style="font-size:24px; font-weight:bold; color:#f87171;">{} Nichos</span></div>'
-            '<div><small style="color:#9ca3af; font-weight:bold;">📊 TOTAL</small><br><span style="font-size:24px; font-weight:bold;">{}</span></div>'
-            '</div>', 
-            qs['p'] or 0, qs['m'], qs['t']
-        )
-        return super().changelist_view(request, extra_context=extra_context)
-
     @admin.action(description="🏴 Ejecutar Exhumación (Liberar Nicho)")
     def marcar_exhumado_masivo(self, request, queryset):
-        queryset.update(
-            nombre_difunto="", 
-            propietario="", 
-            monto_arbitrio=0.00, 
-            esta_exhumado=True,
-            fecha_pago=None,
-            fecha_vencimiento=None
-        )
-        self.message_user(request, "Exhumación masiva completada. Los nichos ahora aparecen como DISPONIBLES.")
-
-from .models import ReporteDano
+        queryset.update(nombre_difunto="", propietario="", monto_arbitrio=0.00, esta_exhumado=True)
+        self.message_user(request, "Exhumación masiva completada.")
 
 @admin.register(ReporteDano)
 class ReporteDanoAdmin(admin.ModelAdmin):
-    list_display = ('nicho_link', 'alerta_urgencia', 'estado_visual', 'fecha_reporte', 'reportado_por', 'ver_foto')
-    list_filter = ('estado', 'nivel_urgencia', 'fecha_reporte')
-    search_fields = ('nicho__codigo', 'descripcion')
+    list_display = ('nicho', 'estado', 'nivel_urgencia', 'fecha_reporte', 'ver_foto')
     list_editable = ('estado',)
-    readonly_fields = ('fecha_reporte', 'reportado_por')
-
-    def nicho_link(self, obj):
-        url = reverse('admin:registros_nicho_change', args=[obj.nicho.id])
-        return format_html('<a href="{}" style="font-weight:bold; color:#1e40af;">{}</a>', url, obj.nicho.codigo)
-    nicho_link.short_description = "Nicho"
-
-    def alerta_urgencia(self, obj):
-        colores = {'LEVE': '#3b82f6', 'MODERADO': '#f59e0b', 'CRITICO': '#ef4444'}
-        color = colores.get(obj.nivel_urgencia, '#6b7280')
-        return format_html('<span style="color:{}; font-weight:bold;">● {}</span>', color, obj.get_nivel_urgencia_display())
-    alerta_urgencia.short_description = "Urgencia"
-
-    def estado_visual(self, obj):
-        return format_html('<b>{}</b>', obj.get_estado_display())
-    estado_visual.short_description = "Estado"
-
+    
     def ver_foto(self, obj):
         if obj.foto_evidencia:
-            return format_html('<a href="{}" target="_blank">🖼️ Ver Foto</a>', obj.foto_evidencia.url)
+            return format_html('<a href="{}" target="_blank">🖼️ Ver</a>', obj.foto_evidencia.url)
         return "Sin foto"
-    ver_foto.short_description = "Evidencia"
-
-# Re-configuración para corregir el error de list_editable
-admin.site.unregister(ReporteDano)
-
-@admin.register(ReporteDano)
-class ReporteDanoAdmin(admin.ModelAdmin):
-    # Agregamos 'estado' directamente para que sea editable
-    list_display = ('nicho_link', 'alerta_urgencia', 'estado', 'fecha_reporte', 'reportado_por', 'ver_foto')
-    list_filter = ('estado', 'nivel_urgencia', 'fecha_reporte')
-    search_fields = ('nicho__codigo', 'descripcion')
-    list_editable = ('estado',) 
-    readonly_fields = ('fecha_reporte', 'reportado_por')
-
-    def nicho_link(self, obj):
-        url = reverse('admin:registros_nicho_change', args=[obj.nicho.id])
-        return format_html('<a href="{}" style="font-weight:bold; color:#1e40af;">{}</a>', url, obj.nicho.codigo)
-    nicho_link.short_description = "Nicho"
-
-    def alerta_urgencia(self, obj):
-        colores = {'LEVE': '#3b82f6', 'MODERADO': '#f59e0b', 'CRITICO': '#ef4444'}
-        color = colores.get(obj.nivel_urgencia, '#6b7280')
-        return format_html('<span style="color:{}; font-weight:bold;">● {}</span>', color, obj.get_nivel_urgencia_display())
-    alerta_urgencia.short_description = "Urgencia"
-
-    def ver_foto(self, obj):
-        if obj.foto_evidencia:
-            return format_html('<a href="{}" target="_blank">🖼️ Ver Foto</a>', obj.foto_evidencia.url)
-        return "Sin foto"
-    ver_foto.short_description = "Evidencia"

@@ -48,25 +48,16 @@ class Nicho(models.Model):
             return {'estado': 'SUJETO A EXHUMACIÓN', 'color': '#dc3545', 'prioridad': 4}
 
     def save(self, *args, **kwargs):
-        # 1. Preparar la data del QR
         sello = self.generar_sello_seguridad()
         qr_text = f"ID: {self.codigo} | Difunto: {self.nombre_difunto or 'N/A'} | Sello: {sello}"
-        
-        # 2. Generar la imagen del QR en memoria
         qr = qrcode.QRCode(version=1, box_size=10, border=5)
         qr.add_data(qr_text)
         qr.make(fit=True)
         img = qr.make_image(fill='black', back_color='white')
-        
         buffer = BytesIO()
         img.save(buffer, format='PNG')
         filename = f'qr_{self.codigo}.png'
-
-        # 3. Guardar el archivo QR sin disparar save() recursivo
-        # Guardamos el archivo en el campo, pero save=False es clave
         self.qr_code.save(filename, File(buffer), save=False)
-        
-        # 4. Guardado final de la base de datos
         super().save(*args, **kwargs)
 
 class ReporteDano(models.Model):
@@ -74,11 +65,12 @@ class ReporteDano(models.Model):
     NIVELES = [('LEVE', 'Leve'), ('MODERADO', 'Moderado'), ('CRITICO', 'Crítico')]
     nicho = models.ForeignKey(Nicho, on_delete=models.CASCADE, related_name='reportes_danos')
     fecha_reporte = models.DateTimeField(auto_now_add=True)
-    descripcion = models.TextField()
+    descripcion = models.TextField(blank=True, null=True)
     nivel_urgencia = models.CharField(max_length=10, choices=NIVELES, default='LEVE')
     estado = models.CharField(max_length=15, choices=ESTADOS, default='PENDIENTE')
-    reportado_por = models.CharField(max_length=100)
-    foto_evidencia = models.ImageField(upload_to='danos/', blank=True, null=True)
+    reportado_por = models.CharField(max_length=100, blank=True, null=True)
+    # CAMBIO A FILEFIELD PARA EVITAR ERRORES DE VALIDACIÓN
+    foto_evidencia = models.FileField(upload_to='danos/', blank=True, null=True)
 
     class Meta:
         verbose_name = "Reporte de Daño"
