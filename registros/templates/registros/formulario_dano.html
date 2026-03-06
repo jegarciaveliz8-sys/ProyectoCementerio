@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reportar Daño - Sanarate G.I.S.</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; padding: 15px; background: #f3f4f6; margin: 0; }
+        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        h2 { color: #1e3a8a; font-size: 1.2rem; margin-bottom: 20px; text-align: center; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; color: #374151; font-size: 0.9rem; }
+        textarea, select, input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #d1d5db; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
+        .btn-submit { background: #dc2626; color: white; border: none; padding: 15px; width: 100%; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; }
+        .back-link { display: block; text-align: center; margin-top: 15px; color: #6b7280; text-decoration: none; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>🛠️ Reporte de Mantenimiento<br><small>Nicho: {{ nicho.codigo }}</small></h2>
+        
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <label>Descripción del Daño:</label>
+            <textarea name="descripcion" placeholder="Describe qué encontraste..." required></textarea>
+            
+            <label>Nivel de Urgencia:</label>
+            <select name="urgencia">
+                <option value="LEVE">🟢 Leve (Mantenimiento)</option>
+                <option value="MODERADO">🟡 Moderado (Reparación)</option>
+                <option value="CRITICO">🔴 Crítico (Urgente)</option>
+            </select>
+
+            <label>📸 Foto de Evidencia:</label>
+            <input type="file" name="foto" accept="image/*" capture="environment">
+            
+            <button type="submit" class="btn-submit">ENVIAR REPORTE</button>
+        </form>
+        
+        <a href="{% url 'consulta_publica' nicho.codigo %}" class="back-link">⬅ Volver a la Consulta</a>
+    </div>
+</body>
+</html>

@@ -5,39 +5,66 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inspector G.I.S. - Sanarate</title>
     <style>
-        body { font-family: sans-serif; margin: 0; padding: 0; text-align: center; 
-               background-color: {% if es_moroso %} #ffeded {% else %} #f0fff0 {% endif %}; }
-        .card { margin: 20px; padding: 20px; border-radius: 15px; background: white; 
-                box-shadow: 0 4px 8px rgba(0,0,0,0.2); border: 2px solid {% if es_moroso %} #d9534f {% else %} #5cb85c {% endif %}; }
-        .status-badge { padding: 15px; border-radius: 10px; font-weight: bold; font-size: 1.5em; 
-                        color: white; margin-bottom: 20px; }
-        .moroso { background-color: #d9534f; }
-        .solvente { background-color: #5cb85c; }
-        .info { text-align: left; font-size: 1.1em; line-height: 1.6; }
-        .info b { color: #555; }
-        .footer { font-size: 0.8em; color: #888; margin-top: 30px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; 
+               background-color: {% if es_moroso %} #fff5f5 {% else %} #f0fdf4 {% endif %}; color: #333; }
+        .card { margin: 15px; padding: 20px; border-radius: 15px; background: white; 
+                box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-top: 8px solid {% if es_moroso %} #dc2626 {% else %} #16a34a {% endif %}; }
+        .status-badge { padding: 15px; border-radius: 10px; font-weight: bold; font-size: 1.3em; 
+                        color: white; margin-bottom: 20px; text-align: center; }
+        .moroso { background-color: #dc2626; }
+        .solvente { background-color: #16a34a; }
+        .info { text-align: left; font-size: 1rem; line-height: 1.4; }
+        .info p { margin: 10px 0; border-bottom: 1px solid #f3f4f6; padding-bottom: 5px; display: flex; justify-content: space-between; }
+        .info b { color: #6b7280; font-weight: 600; }
+        
+        .menu-operativo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+        .btn { padding: 12px 8px; border-radius: 8px; text-decoration: none; color: white; 
+               font-weight: bold; font-size: 0.85rem; text-align: center; transition: 0.3s; }
+        .btn-blue { background-color: #1e40af; }
+        .btn-red { background-color: #991b1b; }
+        .btn-gray { background-color: #4b5563; }
+        .btn-green { background-color: #065f46; }
+        
+        .footer { font-size: 0.75em; color: #9ca3af; margin: 20px 0; text-align: center; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h2>CONSULTA DE NICHO</h2>
+        <h2 style="margin-top:0; color:#1e3a8a; font-size: 1.2rem;">EXPEDIENTE DIGITAL G.I.S.</h2>
+        
         <div class="status-badge {% if es_moroso %} moroso {% else %} solvente {% endif %}">
             {% if es_moroso %} ⚠️ MORA DETECTADA {% else %} ✅ SOLVENTE {% endif %}
         </div>
         
         <div class="info">
-            <p><b>Código:</b> {{ nicho.codigo }}</p>
-            <p><b>Propietario:</b> {{ nicho.propietario }}</p>
-            <p><b>Difunto:</b> {{ nicho.nombre_difunto }}</p>
-            <p><b>Estado de Pago:</b> {% if es_moroso %} Pendiente de Pago {% else %} Al Día {% endif %}</p>
-            {% if dias_vencido > 0 %}
-                <p style="color: red;"><b>Días de retraso:</b> {{ dias_vencido }} días</p>
-            {% endif %}
+            <p><b>Código:</b> <span>{{ nicho.codigo }}</span></p>
+            <p><b>Estado:</b> <span>{% if esta_ocupado %} OCUPADO {% else %} DISPONIBLE {% endif %}</span></p>
+            <p><b>Difunto:</b> <span>{{ nombre_mostrar }}</span></p>
+            <p><b>Propietario:</b> <span>{{ nicho.propietario|default:"S/P" }}</span></p>
+            <p><b>Saldo Arbitrio:</b> <span style="{% if es_moroso %}color:red; font-weight:bold;{% endif %}">Q{{ nicho.monto_arbitrio }}</span></p>
         </div>
+
+        {% if es_staff %}
+        <h3 style="font-size: 0.9rem; color: #374151; margin-top: 25px; border-left: 4px solid #1e40af; padding-left: 10px;">ACCIONES DE CAMPO</h3>
+        <div class="menu-operativo">
+            {% if es_moroso %}
+                <a href="{% url 'pdf_notificacion_mora' nicho.id %}" class="btn btn-red">📩 Notificar Mora</a>
+                <a href="{% url 'pdf_orden_exhumacion' nicho.id %}" class="btn btn-gray">💀 Orden Exhumación</a>
+            {% else %}
+                <a href="{% url 'pdf_solvencia_municipal' nicho.id %}" class="btn btn-green">📜 Ver Solvencia</a>
+            {% endif %}
+            
+            <a href="{% url 'ficha_tecnica_pro' nicho.id %}" class="btn btn-blue">📄 Ficha Técnica</a>
+            <a href="{% url 'pdf_reporte_inspeccion' nicho.id %}" class="btn btn-gray">🛠️ Reportar Daño</a>
+            <a href="{% url 'pdf_acta_inhumacion' nicho.id %}" class="btn btn-blue">✍️ Acta Entierro</a>
+        </div>
+        {% endif %}
     </div>
+
     <div class="footer">
-        Municipalidad de Sanarate - Departamento de Cementerios<br>
-        Hora de consulta: {{ fecha_servidor|date:"H:i:s" }}
+        MUNICIPALIDAD DE SANARATE<br>
+        Consultado por: {{ user.username }}<br>
+        {{ fecha_consulta|date:"d/m/Y H:i" }}
     </div>
 </body>
 </html>

@@ -25,24 +25,18 @@ class Nicho(models.Model):
     def __str__(self):
         return f"{self.codigo} - {self.nombre_difunto or 'Disponible'}"
 
-    # --- SEGURIDAD CRIPTOGRÁFICA (Nivel Mundial) ---
     def generar_sello_seguridad(self):
-        """Crea un código único para validar la autenticidad del Título."""
         seed = f"{self.codigo}-{self.propietario}-{self.fecha_vencimiento}"
         return hashlib.sha256(seed.encode()).hexdigest()[:16].upper()
 
-    # --- SEMÁFORO LEGAL DE EXHUMACIÓN ---
     @property
     def semaforo_estado(self):
-        """Lógica de control para la Municipalidad."""
         if self.esta_exhumado:
             return {'estado': 'EXHUMADO', 'color': '#6c757d', 'prioridad': 0}
         if not self.fecha_vencimiento:
             return {'estado': 'SIN FECHA', 'color': '#17a2b8', 'prioridad': 0}
-        
         hoy = timezone.now().date()
         mora = hoy - self.fecha_vencimiento
-
         if mora.days <= 0:
             return {'estado': 'AL DÍA', 'color': '#28a745', 'prioridad': 1}
         elif 0 < mora.days <= 90:
@@ -52,11 +46,9 @@ class Nicho(models.Model):
         else:
             return {'estado': 'SUJETO A EXHUMACIÓN', 'color': '#dc3545', 'prioridad': 4}
 
-    # --- MOTOR DE QR ENRIQUECIDO ---
     def save(self, *args, **kwargs):
         if not self.qr_code:
             sello = self.generar_sello_seguridad()
-            # El QR ahora incluye el sello de seguridad para validación
             qr_data = f"ID: {self.codigo} | Sello: {sello}"
             qr = qrcode.QRCode(version=1, box_size=10, border=5)
             qr.add_data(qr_data)
@@ -68,5 +60,21 @@ class Nicho(models.Model):
             self.qr_code.save(filename, File(buffer), save=False)
         super().save(*args, **kwargs)
 
-# Registro de Auditoría
+# NUEVO MODELO DE REPORTES
+class ReporteDano(models.Model):
+    ESTADOS = [('PENDIENTE', '🔴 Pendiente'), ('EN_PROCESO', '🟡 En Proceso'), ('RESUELTO', '🟢 Resuelto')]
+    NIVELES = [('LEVE', 'Leve'), ('MODERADO', 'Moderado'), ('CRITICO', 'Crítico')]
+    nicho = models.ForeignKey(Nicho, on_delete=models.CASCADE, related_name='reportes_danos')
+    fecha_reporte = models.DateTimeField(auto_now_add=True)
+    descripcion = models.TextField()
+    nivel_urgencia = models.CharField(max_length=10, choices=NIVELES, default='LEVE')
+    estado = models.CharField(max_length=15, choices=ESTADOS, default='PENDIENTE')
+    reportado_por = models.CharField(max_length=100)
+    foto_evidencia = models.ImageField(upload_to='danos/', blank=True, null=True)
+
+    class Meta:
+        verbose_name = "Reporte de Daño"
+        verbose_name_plural = "Control de Daños"
+
 auditlog.register(Nicho)
+auditlog.register(ReporteDano)

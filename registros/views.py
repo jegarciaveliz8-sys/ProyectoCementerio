@@ -10,20 +10,27 @@ from .models import Nicho
 import io
 import os
 
+# --- VISTAS DE DASHBOARD Y MAPA ---
 def dashboard(request):
     total = Nicho.objects.count()
-    ocupados = Nicho.objects.exclude(nombre_difunto__isnull=True).exclude(nombre_difunto="").count()
+    # Lógica mejorada: Ocupado si tiene nombre de difunto y no está vacío
+    ocupados = Nicho.objects.exclude(Q(nombre_difunto__isnull=True) | Q(nombre_difunto="")).count()
     disponibles = total - ocupados
     mora_count = Nicho.objects.filter(monto_arbitrio__lte=0).exclude(nombre_difunto="").count()
     recaudado = Nicho.objects.aggregate(Sum('monto_arbitrio'))['monto_arbitrio__sum'] or 0
-    return render(request, 'registros/dashboard.html', {'total': total, 'ocupados': ocupados, 'disponibles': disponibles, 'mora_total': mora_count, 'recaudado': recaudado})
+    return render(request, 'registros/dashboard.html', {
+        'total': total, 
+        'ocupados': ocupados, 
+        'disponibles': disponibles, 
+        'mora_total': mora_count, 
+        'recaudado': recaudado
+    })
 
 def mapa_cimenterio(request):
     nichos = Nicho.objects.exclude(lat__isnull=True).exclude(lng__isnull=True)
     return render(request, 'registros/mapa.html', {'nichos': nichos})
 
 def datos_nichos_json(request):
-    # --- EL RADAR DE BÚSQUEDA MEJORADO ---
     query = request.GET.get('q', '')
     if query:
         nichos = Nicho.objects.filter(
@@ -34,17 +41,43 @@ def datos_nichos_json(request):
     else:
         nichos = Nicho.objects.all()
     
-    data = [{'id': n.id, 'codigo': n.codigo, 'nombre_difunto': n.nombre_difunto or 'DISPONIBLE', 'propietario': n.propietario or 'S/P', 'lat': n.lat, 'lng': n.lng, 'monto_arbitrio': float(n.monto_arbitrio)} for n in nichos]
+    data = [{
+        'id': n.id, 
+        'codigo': n.codigo, 
+        'nombre_difunto': n.nombre_difunto or 'DISPONIBLE', 
+        'propietario': n.propietario or 'S/P', 
+        'lat': n.lat, 
+        'lng': n.lng, 
+        'monto_arbitrio': float(n.monto_arbitrio)
+    } for n in nichos]
     return JsonResponse(data, safe=False)
 
-def imprimir_ficha(request, nicho_id):
-    nicho = get_object_or_404(Nicho, id=nicho_id)
-    return render(request, 'registros/ficha_impresion.html', {'nicho': nicho})
+# --- CONSULTA OPERATIVA (EL QR) ---
+def consulta_publica(request, codigo):
+    """
+    Esta es la vista que abre el QR. 
+    Ahora detecta si el nicho tiene un difunto y su estado de mora.
+    """
+    nicho = get_object_or_404(Nicho, codigo=codigo)
+    
+    # Verificación de ocupación real
+    esta_ocupado = bool(nicho.nombre_difunto and nicho.nombre_difunto.strip())
+    
+    # Verificación de solvencia
+    # Si el monto es 0 o menos, asumimos mora o falta de pago de arbitrio
+    es_moroso = nicho.monto_arbitrio <= 0
+    
+    context = {
+        'nicho': nicho,
+        'esta_ocupado': esta_ocupado,
+        'nombre_mostrar': nicho.nombre_difunto if esta_ocupado else "ESPACIO DISPONIBLE",
+        'es_moroso': es_moroso,
+        'fecha_consulta': timezone.now(),
+        'es_staff': request.user.is_staff
+    }
+    return render(request, 'registros/consulta_inspector.html', context)
 
-def imprimir_todos_qrs(request):
-    nichos = Nicho.objects.exclude(qr_code__isnull=True).exclude(qr_code='')
-    return render(request, 'registros/imprimir_qrs.html', {'nichos': nichos})
-
+# --- GENERACIÓN DE DOCUMENTOS PDF (REPORTLAB) ---
 def dibujar_membrete(p, width, titulo_doc):
     logo_path = os.path.join(settings.BASE_DIR, 'registros', 'static', 'img', 'logo_muni.png')
     if os.path.exists(logo_path):
@@ -63,15 +96,29 @@ def ficha_tecnica_pro(request, nicho_id):
     p = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
     dibujar_membrete(p, width, "FICHA TÉCNICA DE CAMPO")
+    
     p.setFillColor(colors.whitesmoke); p.rect(50, 480, 510, 160, fill=1); p.setFillColor(colors.black)
     p.setFont("Helvetica-Bold", 12); p.drawString(70, 615, f"INFORMACIÓN DEL NICHO: {nicho.codigo}")
+    
     y = 590
-    for label, valor in [("Nombre del Difunto:", nicho.nombre_difunto or "SIN REGISTRO"), ("Propietario:", nicho.propietario or "S/P"), ("Monto Arbitrio:", f"Q{nicho.monto_arbitrio}"), ("Ubicación GPS:", f"{nicho.lat}, {nicho.lng}" if nicho.lat else "NO ASIGNADAS")]:
+    datos = [
+        ("Estado Actual:", "OCUPADO" if nicho.nombre_difunto else "DISPONIBLE"),
+        ("Nombre del Difunto:", nicho.nombre_difunto or "SIN REGISTRO"),
+        ("Propietario:", nicho.propietario or "S/P"),
+        ("Monto Arbitrio:", f"Q{nicho.monto_arbitrio}"),
+        ("Ubicación GPS:", f"{nicho.lat}, {nicho.lng}" if nicho.lat else "NO ASIGNADAS")
+    ]
+    
+    for label, valor in datos:
         p.setFont("Helvetica-Bold", 11); p.drawString(80, y, label)
         p.setFont("Helvetica", 11); p.drawString(230, y, str(valor)); y -= 25
+        
     p.line(100, 150, 250, 150); p.drawCentredString(175, 135, "FIRMA INSPECTOR")
     p.line(350, 150, 500, 150); p.drawCentredString(425, 135, "SELLO MUNICIPAL")
-    if nicho.qr_code: p.drawImage(nicho.qr_code.path, 460, 40, width=80, height=80)
+    
+    if nicho.qr_code:
+        p.drawImage(nicho.qr_code.path, 460, 40, width=80, height=80)
+        
     p.setFont("Helvetica-Oblique", 7); p.drawString(50, 30, f"Generado por: {request.user.username} | {timezone.now().strftime('%d/%m/%Y')}")
     p.showPage(); p.save(); buffer.seek(0)
     return HttpResponse(buffer, content_type='application/pdf')
@@ -87,6 +134,39 @@ def generar_titulo_propiedad(request, nicho_id):
     if nicho.qr_code: p.drawImage(nicho.qr_code.path, 460, 50, width=80, height=80)
     p.showPage(); p.save(); buffer.seek(0)
     return HttpResponse(buffer, content_type='application/pdf')
+
+def pdf_notificacion_mora(request, nicho_id):
+    nicho = get_object_or_404(Nicho, id=nicho_id)
+    buffer = io.BytesIO(); p = canvas.Canvas(buffer, pagesize=letter)
+    width = letter[0]
+    p.setFillColor(colors.darkred); dibujar_membrete(p, width, "NOTIFICACIÓN DE COBRO Y ESTADO DE MORA")
+    p.setFillColor(colors.black)
+    p.setFont("Helvetica-Bold", 12); p.drawString(50, 630, f"ATENCIÓN PROPIETARIO: {nicho.propietario or 'S/P'}")
+    p.setFont("Helvetica", 11)
+    cuerpo = [
+        f"Se le informa que el nicho identificado con el código {nicho.codigo}, del cual usted es responsable,",
+        f"presenta un saldo pendiente de pago. Según nuestros registros, el monto es de: Q{nicho.monto_arbitrio}.",
+        "",
+        "De no hacerse efectivo el pago en los próximos 30 días calendario, la municipalidad",
+        "queda facultada para iniciar el proceso de exhumación y recuperación del espacio según",
+        "el reglamento vigente de cementerios de Sanarate."
+    ]
+    y = 600
+    for linea in cuerpo:
+        p.drawString(50, y, linea); y -= 20
+    p.rect(50, 400, 510, 80, fill=0)
+    p.setFont("Helvetica-Bold", 10); p.drawCentredString(width/2, 450, "PRESENTAR ESTE AVISO EN TESORERÍA MUNICIPAL PARA SOLVENTAR")
+    p.showPage(); p.save(); buffer.seek(0)
+    return HttpResponse(buffer, content_type='application/pdf')
+
+# --- OTRAS FUNCIONES ADMINISTRATIVAS ---
+def imprimir_ficha(request, nicho_id):
+    nicho = get_object_or_404(Nicho, id=nicho_id)
+    return render(request, 'registros/ficha_impresion.html', {'nicho': nicho})
+
+def imprimir_todos_qrs(request):
+    nichos = Nicho.objects.exclude(qr_code__isnull=True).exclude(qr_code='')
+    return render(request, 'registros/imprimir_qrs.html', {'nichos': nichos})
 
 def pdf_orden_exhumacion(request, nicho_id):
     nicho = get_object_or_404(Nicho, id=nicho_id)
@@ -127,36 +207,6 @@ def pdf_permiso_construccion(request, nicho_id):
     p.drawString(50, 470, "TRABAJO: [ ] Lápida  [ ] Repello  [ ] Azulejo  [ ] Otros")
     p.drawCentredString(300, 150, "_________________________________")
     p.drawCentredString(300, 135, "SELLO DE VIGILANCIA CEMENTERIO")
-    p.showPage(); p.save(); buffer.seek(0)
-    return HttpResponse(buffer, content_type='application/pdf')
-
-def consulta_publica(request, codigo):
-    nicho = get_object_or_404(Nicho, codigo=codigo)
-    es_moroso = nicho.monto_arbitrio <= 0
-    context = {'nicho': nicho, 'es_moroso': es_moroso, 'fecha_servidor': timezone.now()}
-    return render(request, 'registros/consulta_inspector.html', context)
-
-def pdf_notificacion_mora(request, nicho_id):
-    nicho = get_object_or_404(Nicho, id=nicho_id)
-    buffer = io.BytesIO(); p = canvas.Canvas(buffer, pagesize=letter)
-    width = letter[0]
-    p.setFillColor(colors.darkred); dibujar_membrete(p, width, "NOTIFICACIÓN DE COBRO Y ESTADO DE MORA")
-    p.setFillColor(colors.black)
-    p.setFont("Helvetica-Bold", 12); p.drawString(50, 630, f"ATENCIÓN PROPIETARIO: {nicho.propietario or 'S/P'}")
-    p.setFont("Helvetica", 11)
-    cuerpo = [
-        f"Se le informa que el nicho identificado con el código {nicho.codigo}, del cual usted es responsable,",
-        f"presenta un saldo pendiente de pago. Según nuestros registros, el monto es de: Q{nicho.monto_arbitrio}.",
-        "",
-        "De no hacerse efectivo el pago en los próximos 30 días calendario, la municipalidad",
-        "queda facultada para iniciar el proceso de exhumación y recuperación del espacio según",
-        "el reglamento vigente de cementerios de Sanarate."
-    ]
-    y = 600
-    for linea in cuerpo:
-        p.drawString(50, y, linea); y -= 20
-    p.rect(50, 400, 510, 80, fill=0)
-    p.setFont("Helvetica-Bold", 10); p.drawCentredString(width/2, 450, "PRESENTAR ESTE AVISO EN TESORERÍA MUNICIPAL PARA SOLVENTAR")
     p.showPage(); p.save(); buffer.seek(0)
     return HttpResponse(buffer, content_type='application/pdf')
 
@@ -220,3 +270,24 @@ def pdf_reporte_inspeccion(request, nicho_id):
     p.line(200, 150, 400, 150); p.drawCentredString(300, 135, "FIRMA DEL INSPECTOR DE CAMPO")
     p.showPage(); p.save(); buffer.seek(0)
     return HttpResponse(buffer, content_type='application/pdf')
+
+from .models import ReporteDano
+
+def reportar_dano(request, nicho_id):
+    nicho = get_object_or_404(Nicho, id=nicho_id)
+    if request.method == 'POST':
+        descripcion = request.POST.get('descripcion')
+        urgencia = request.POST.get('urgencia')
+        foto = request.FILES.get('foto')
+        
+        ReporteDano.objects.create(
+            nicho=nicho,
+            descripcion=descripcion,
+            nivel_urgencia=urgencia,
+            reportado_por=request.user.username if request.user.is_authenticated else "Inspector de Campo",
+            foto_evidencia=foto
+        )
+        # Después de reportar, regresamos a la ficha del nicho
+        return redirect('consulta_publica', codigo=nicho.codigo)
+    
+    return render(request, 'registros/formulario_dano.html', {'nicho': nicho})

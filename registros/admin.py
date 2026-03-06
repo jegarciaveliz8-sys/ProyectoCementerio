@@ -98,3 +98,63 @@ class NichoAdmin(ImportExportModelAdmin):
             fecha_vencimiento=None
         )
         self.message_user(request, "Exhumación masiva completada. Los nichos ahora aparecen como DISPONIBLES.")
+
+from .models import ReporteDano
+
+@admin.register(ReporteDano)
+class ReporteDanoAdmin(admin.ModelAdmin):
+    list_display = ('nicho_link', 'alerta_urgencia', 'estado_visual', 'fecha_reporte', 'reportado_por', 'ver_foto')
+    list_filter = ('estado', 'nivel_urgencia', 'fecha_reporte')
+    search_fields = ('nicho__codigo', 'descripcion')
+    list_editable = ('estado',)
+    readonly_fields = ('fecha_reporte', 'reportado_por')
+
+    def nicho_link(self, obj):
+        url = reverse('admin:registros_nicho_change', args=[obj.nicho.id])
+        return format_html('<a href="{}" style="font-weight:bold; color:#1e40af;">{}</a>', url, obj.nicho.codigo)
+    nicho_link.short_description = "Nicho"
+
+    def alerta_urgencia(self, obj):
+        colores = {'LEVE': '#3b82f6', 'MODERADO': '#f59e0b', 'CRITICO': '#ef4444'}
+        color = colores.get(obj.nivel_urgencia, '#6b7280')
+        return format_html('<span style="color:{}; font-weight:bold;">● {}</span>', color, obj.get_nivel_urgencia_display())
+    alerta_urgencia.short_description = "Urgencia"
+
+    def estado_visual(self, obj):
+        return format_html('<b>{}</b>', obj.get_estado_display())
+    estado_visual.short_description = "Estado"
+
+    def ver_foto(self, obj):
+        if obj.foto_evidencia:
+            return format_html('<a href="{}" target="_blank">🖼️ Ver Foto</a>', obj.foto_evidencia.url)
+        return "Sin foto"
+    ver_foto.short_description = "Evidencia"
+
+# Re-configuración para corregir el error de list_editable
+admin.site.unregister(ReporteDano)
+
+@admin.register(ReporteDano)
+class ReporteDanoAdmin(admin.ModelAdmin):
+    # Agregamos 'estado' directamente para que sea editable
+    list_display = ('nicho_link', 'alerta_urgencia', 'estado', 'fecha_reporte', 'reportado_por', 'ver_foto')
+    list_filter = ('estado', 'nivel_urgencia', 'fecha_reporte')
+    search_fields = ('nicho__codigo', 'descripcion')
+    list_editable = ('estado',) 
+    readonly_fields = ('fecha_reporte', 'reportado_por')
+
+    def nicho_link(self, obj):
+        url = reverse('admin:registros_nicho_change', args=[obj.nicho.id])
+        return format_html('<a href="{}" style="font-weight:bold; color:#1e40af;">{}</a>', url, obj.nicho.codigo)
+    nicho_link.short_description = "Nicho"
+
+    def alerta_urgencia(self, obj):
+        colores = {'LEVE': '#3b82f6', 'MODERADO': '#f59e0b', 'CRITICO': '#ef4444'}
+        color = colores.get(obj.nivel_urgencia, '#6b7280')
+        return format_html('<span style="color:{}; font-weight:bold;">● {}</span>', color, obj.get_nivel_urgencia_display())
+    alerta_urgencia.short_description = "Urgencia"
+
+    def ver_foto(self, obj):
+        if obj.foto_evidencia:
+            return format_html('<a href="{}" target="_blank">🖼️ Ver Foto</a>', obj.foto_evidencia.url)
+        return "Sin foto"
+    ver_foto.short_description = "Evidencia"
