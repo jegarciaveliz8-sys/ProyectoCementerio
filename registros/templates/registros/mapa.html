@@ -12,7 +12,7 @@
             background: rgba(15, 23, 42, 0.95); padding: 12px; border-radius: 8px;
             border: 2px solid #3b82f6; display: flex; gap: 10px;
         }
-        #search-box input { background: #1e293b; border: 1px solid #334155; color: #fff; padding: 8px; border-radius: 4px; outline: none; }
+        #search-box input { background: #1e293b; border: 1px solid #334155; color: #fff; padding: 8px; border-radius: 4px; outline: none; width: 220px; }
         #search-box button { background: #2563eb; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
         #muni-branding {
             position: absolute; top: 20px; right: 20px; z-index: 1000;
@@ -36,7 +36,7 @@
 <body>
 
     <div id="search-box">
-        <input type="text" id="target-nicho" placeholder="Código (A1-5-036)">
+        <input type="text" id="target-nicho" placeholder="Código, Nombre o Apellido">
         <button onclick="buscar()">🛰️ RADAR</button>
     </div>
 
@@ -57,6 +57,7 @@
 
         var markers = {};
         var puntos = [];
+        var listaBusqueda = []; // LA CLAVE: Base de datos local en el navegador
 
         {% for n in nichos %}
             {% if n.lat and n.lng %}
@@ -64,6 +65,8 @@
                     var lat = parseFloat("{{ n.lat }}".replace(',', '.'));
                     var lng = parseFloat("{{ n.lng }}".replace(',', '.'));
                     var cod = "{{ n.codigo }}";
+                    var difunto = "{{ n.nombre_difunto|default:'DISPONIBLE' }}";
+                    var propietario = "{{ n.propietario|default:'S/P' }}";
                     var color = "{% if n.monto_arbitrio > 0 %}#10b981{% else %}#ef4444{% endif %}";
 
                     var radarIcon = L.divIcon({
@@ -77,7 +80,8 @@
                     m.bindPopup(`
                         <div class="nicho-popup">
                             <h3>${cod}</h3>
-                            <p><b>Difunto:</b> {{ n.nombre_difunto|default:"DISPONIBLE" }}</p>
+                            <p><b>Difunto:</b> ${difunto}</p>
+                            <p><b>Propietario:</b> ${propietario}</p>
                             {% if n.qr_code %}
                                 <img src="{{ n.qr_code.url }}">
                             {% endif %}
@@ -88,32 +92,39 @@
 
                     markers[cod] = m;
                     puntos.push([lat, lng]);
+                    
+                    // Guardamos todo en la lista local para buscar sin internet
+                    listaBusqueda.push({
+                        codigo: cod.toUpperCase(),
+                        nombre: difunto.toUpperCase(),
+                        propietario: propietario.toUpperCase()
+                    });
                 })();
             {% endif %}
         {% endfor %}
 
         function buscar() {
-            var val = document.getElementById('target-nicho').value.trim().toUpperCase();
-            if (markers[val]) {
-                map.flyTo(markers[val].getLatLng(), 21, { duration: 1.5 });
-                markers[val].openPopup();
+            var val = document.getElementById("target-nicho").value.trim().toUpperCase();
+            if (!val) return;
+
+            // BUSCADOR LOCAL (No usa internet, busca en la lista que creamos arriba)
+            var encontrado = listaBusqueda.find(function(item) {
+                return item.codigo.includes(val) || 
+                       item.nombre.includes(val) || 
+                       item.propietario.includes(val);
+            });
+
+            if (encontrado && markers[encontrado.codigo]) {
+                var m = markers[encontrado.codigo];
+                map.flyTo(m.getLatLng(), 21, { duration: 1.5 });
+                m.openPopup();
+            } else {
+                alert("No se encontró ningún registro con: " + val);
             }
         }
 
-        // --- LÓGICA DE VUELO AUTOMÁTICO DESDE ADMIN ---
         window.onload = function() {
-            const params = new URLSearchParams(window.location.search);
-            const lat = params.get('lat');
-            const lng = params.get('lng');
-            const cod = params.get('codigo');
-
-            if (lat && lng) {
-                // Si viene del Admin, vuela directo a las coordenadas
-                map.flyTo([lat, lng], 21, { duration: 2 });
-                if (cod && markers[cod]) {
-                    markers[cod].openPopup();
-                }
-            } else if (puntos.length > 0) {
+            if (puntos.length > 0) {
                 map.fitBounds(L.latLngBounds(puntos));
             }
         };

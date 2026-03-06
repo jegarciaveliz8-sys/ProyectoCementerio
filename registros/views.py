@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse, HttpResponse
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from django.utils import timezone
 from django.conf import settings
 from reportlab.pdfgen import canvas
@@ -23,8 +23,18 @@ def mapa_cimenterio(request):
     return render(request, 'registros/mapa.html', {'nichos': nichos})
 
 def datos_nichos_json(request):
-    nichos = Nicho.objects.all()
-    data = [{'id': n.id, 'codigo': n.codigo, 'nombre_difunto': n.nombre_difunto, 'lat': n.lat, 'lng': n.lng, 'monto_arbitrio': float(n.monto_arbitrio)} for n in nichos]
+    # --- EL RADAR DE BÚSQUEDA MEJORADO ---
+    query = request.GET.get('q', '')
+    if query:
+        nichos = Nicho.objects.filter(
+            Q(codigo__icontains=query) | 
+            Q(nombre_difunto__icontains=query) | 
+            Q(propietario__icontains=query)
+        )
+    else:
+        nichos = Nicho.objects.all()
+    
+    data = [{'id': n.id, 'codigo': n.codigo, 'nombre_difunto': n.nombre_difunto or 'DISPONIBLE', 'propietario': n.propietario or 'S/P', 'lat': n.lat, 'lng': n.lng, 'monto_arbitrio': float(n.monto_arbitrio)} for n in nichos]
     return JsonResponse(data, safe=False)
 
 def imprimir_ficha(request, nicho_id):
@@ -35,7 +45,6 @@ def imprimir_todos_qrs(request):
     nichos = Nicho.objects.exclude(qr_code__isnull=True).exclude(qr_code='')
     return render(request, 'registros/imprimir_qrs.html', {'nichos': nichos})
 
-# --- HELPER PARA MEMBRETE ---
 def dibujar_membrete(p, width, titulo_doc):
     logo_path = os.path.join(settings.BASE_DIR, 'registros', 'static', 'img', 'logo_muni.png')
     if os.path.exists(logo_path):
@@ -48,21 +57,18 @@ def dibujar_membrete(p, width, titulo_doc):
     p.setFont("Helvetica-Bold", 14)
     p.drawCentredString(width / 2, 670, titulo_doc)
 
-# --- FICHAS Y TÍTULOS ---
 def ficha_tecnica_pro(request, nicho_id):
     nicho = get_object_or_404(Nicho, id=nicho_id)
     buffer = io.BytesIO()
     p = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
     dibujar_membrete(p, width, "FICHA TÉCNICA DE CAMPO")
-    
     p.setFillColor(colors.whitesmoke); p.rect(50, 480, 510, 160, fill=1); p.setFillColor(colors.black)
     p.setFont("Helvetica-Bold", 12); p.drawString(70, 615, f"INFORMACIÓN DEL NICHO: {nicho.codigo}")
     y = 590
     for label, valor in [("Nombre del Difunto:", nicho.nombre_difunto or "SIN REGISTRO"), ("Propietario:", nicho.propietario or "S/P"), ("Monto Arbitrio:", f"Q{nicho.monto_arbitrio}"), ("Ubicación GPS:", f"{nicho.lat}, {nicho.lng}" if nicho.lat else "NO ASIGNADAS")]:
         p.setFont("Helvetica-Bold", 11); p.drawString(80, y, label)
         p.setFont("Helvetica", 11); p.drawString(230, y, str(valor)); y -= 25
-    
     p.line(100, 150, 250, 150); p.drawCentredString(175, 135, "FIRMA INSPECTOR")
     p.line(350, 150, 500, 150); p.drawCentredString(425, 135, "SELLO MUNICIPAL")
     if nicho.qr_code: p.drawImage(nicho.qr_code.path, 460, 40, width=80, height=80)
@@ -82,7 +88,6 @@ def generar_titulo_propiedad(request, nicho_id):
     p.showPage(); p.save(); buffer.seek(0)
     return HttpResponse(buffer, content_type='application/pdf')
 
-# --- FORMULARIOS ADMINISTRATIVOS (MEJORADOS) ---
 def pdf_orden_exhumacion(request, nicho_id):
     nicho = get_object_or_404(Nicho, id=nicho_id)
     buffer = io.BytesIO(); p = canvas.Canvas(buffer, pagesize=letter)
@@ -131,15 +136,12 @@ def consulta_publica(request, codigo):
     context = {'nicho': nicho, 'es_moroso': es_moroso, 'fecha_servidor': timezone.now()}
     return render(request, 'registros/consulta_inspector.html', context)
 
-# --- 4. NOTIFICACIÓN DE MORA (El aviso de cobro) ---
 def pdf_notificacion_mora(request, nicho_id):
     nicho = get_object_or_404(Nicho, id=nicho_id)
     buffer = io.BytesIO(); p = canvas.Canvas(buffer, pagesize=letter)
     width = letter[0]
-    
     p.setFillColor(colors.darkred); dibujar_membrete(p, width, "NOTIFICACIÓN DE COBRO Y ESTADO DE MORA")
     p.setFillColor(colors.black)
-    
     p.setFont("Helvetica-Bold", 12); p.drawString(50, 630, f"ATENCIÓN PROPIETARIO: {nicho.propietario or 'S/P'}")
     p.setFont("Helvetica", 11)
     cuerpo = [
@@ -153,47 +155,37 @@ def pdf_notificacion_mora(request, nicho_id):
     y = 600
     for linea in cuerpo:
         p.drawString(50, y, linea); y -= 20
-
     p.rect(50, 400, 510, 80, fill=0)
     p.setFont("Helvetica-Bold", 10); p.drawCentredString(width/2, 450, "PRESENTAR ESTE AVISO EN TESORERÍA MUNICIPAL PARA SOLVENTAR")
-    
     p.showPage(); p.save(); buffer.seek(0)
     return HttpResponse(buffer, content_type='application/pdf')
 
-# --- 5. ACTA DE INHUMACIÓN (El registro de ingreso) ---
 def pdf_acta_inhumacion(request, nicho_id):
     nicho = get_object_or_404(Nicho, id=nicho_id)
     buffer = io.BytesIO(); p = canvas.Canvas(buffer, pagesize=letter)
     dibujar_membrete(p, letter[0], "ACTA OFICIAL DE INHUMACIÓN")
-    
     p.setFont("Helvetica", 11)
     p.drawString(50, 630, f"En el municipio de Sanarate, siendo la fecha {timezone.now().strftime('%d/%m/%Y')},")
     p.drawString(50, 610, f"se procede a la inhumación de los restos de: {nicho.nombre_difunto or 'N/A'}")
     p.drawString(50, 590, f"en el nicho código: {nicho.codigo}.")
-    
     p.setFont("Helvetica-Bold", 11); p.drawString(50, 550, "DATOS DE CONTROL:")
     p.setFont("Helvetica", 10)
     p.drawString(60, 530, "Certificado de Defunción (RENAP): _______________________________")
     p.drawString(60, 510, "Empresa Funeraria: _____________________________________________")
     p.drawString(60, 490, "Familiar que entrega: ___________________________________________")
-    
     p.line(100, 250, 250, 250); p.drawCentredString(175, 235, "ADMINISTRADOR")
     p.line(350, 250, 500, 250); p.drawCentredString(425, 235, "RECIBÍ CONFORME (FAMILIAR)")
-    
     p.showPage(); p.save(); buffer.seek(0)
     return HttpResponse(buffer, content_type='application/pdf')
 
-# --- 6. CERTIFICACIÓN DE SOLVENCIA (Documento Legal de Pago) ---
 def pdf_solvencia_municipal(request, nicho_id):
     nicho = get_object_or_404(Nicho, id=nicho_id)
     buffer = io.BytesIO(); p = canvas.Canvas(buffer, pagesize=letter)
     width = letter[0]
     dibujar_membrete(p, width, "CERTIFICACIÓN DE SOLVENCIA DE ARBITRIOS")
-    
     p.setFont("Helvetica", 12)
     p.drawCentredString(width/2, 600, "EL DEPARTAMENTO DE CEMENTERIOS DE LA MUNICIPALIDAD DE SANARATE")
     p.setFont("Helvetica-Bold", 14); p.drawCentredString(width/2, 570, "CERTIFICA:")
-    
     p.setFont("Helvetica", 12)
     texto = [
         f"Que el nicho identificado con el código {nicho.codigo},",
@@ -204,19 +196,15 @@ def pdf_solvencia_municipal(request, nicho_id):
     y = 530
     for linea in texto:
         p.drawCentredString(width/2, y, linea); y -= 25
-
     p.setFont("Helvetica-Bold", 12); p.drawCentredString(width/2, 400, "VALIDACIÓN POR SISTEMA G.I.S.")
     if nicho.qr_code: p.drawImage(nicho.qr_code.path, width/2 - 40, 300, width=80, height=80)
-    
     p.showPage(); p.save(); buffer.seek(0)
     return HttpResponse(buffer, content_type='application/pdf')
 
-# --- 7. REPORTE DE INSPECCIÓN DE CAMPO (Daños y Estado) ---
 def pdf_reporte_inspeccion(request, nicho_id):
     nicho = get_object_or_404(Nicho, id=nicho_id)
     buffer = io.BytesIO(); p = canvas.Canvas(buffer, pagesize=letter)
     dibujar_membrete(p, letter[0], "BOLETA DE INSPECCIÓN TÉCNICA")
-    
     p.setFont("Helvetica-Bold", 11); p.drawString(50, 630, f"ESTADO FÍSICO DEL NICHO: {nicho.codigo}")
     p.setFont("Helvetica", 10)
     items = ["ESTADO DE LA LOSA: [ ] Bueno [ ] Regular [ ] Malo", 
@@ -227,11 +215,8 @@ def pdf_reporte_inspeccion(request, nicho_id):
     y = 600
     for item in items:
         p.drawString(60, y, item); y -= 30
-        
-    p.rect(50, 400, 510, 100) # Espacio para croquis manual
+    p.rect(50, 400, 510, 100)
     p.drawCentredString(300, 405, "ESPACIO PARA ANOTACIONES ADICIONALES DEL INSPECTOR")
-    
     p.line(200, 150, 400, 150); p.drawCentredString(300, 135, "FIRMA DEL INSPECTOR DE CAMPO")
     p.showPage(); p.save(); buffer.seek(0)
     return HttpResponse(buffer, content_type='application/pdf')
-
