@@ -124,7 +124,17 @@
         }
 
         window.onload = function() {
-            if (puntos.length > 0) {
+            const params = new URLSearchParams(window.location.search);
+            const lat = params.get("lat");
+            const lng = params.get("lng");
+            const cod = params.get("codigo");
+
+            if (lat && lng) {
+                map.flyTo([parseFloat(lat), parseFloat(lng)], 21, { duration: 2 });
+                if (cod && markers[cod]) {
+                    markers[cod].openPopup();
+                }
+            } else if (puntos.length > 0) {
                 map.fitBounds(L.latLngBounds(puntos));
             }
         };
