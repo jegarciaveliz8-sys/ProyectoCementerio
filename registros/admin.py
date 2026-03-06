@@ -17,20 +17,14 @@ class NichoResource(resources.ModelResource):
 @admin.register(Nicho)
 class NichoAdmin(ImportExportModelAdmin):
     resource_class = NichoResource
-    # 1. Regresamos los nombres de columnas correctos
     list_display = ('codigo', 'nombre_difunto', 'propietario', 'status_financiero', 'estado_legal', 'consola_tecnologica')
     list_editable = ('nombre_difunto', 'propietario')
     search_fields = ('codigo', 'nombre_difunto', 'propietario')
-    
-    # 2. Regresamos al orden original para que no se desordene Sanarate
     ordering = ('id',) 
     list_per_page = 50 
-    
     list_filter = ('esta_exhumado', 'monto_arbitrio', ('fecha_vencimiento', admin.DateFieldListFilter), 'fecha_pago')
-    
     actions = ['exportar_a_excel_veloz', 'marcar_exhumado_masivo']
 
-    # --- TUS FUNCIONES VISUALES (Restauradas) ---
     def estado_legal(self, obj):
         info = obj.semaforo_estado 
         return format_html('<span style="background:{}; color:white; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; text-transform:uppercase;">{}</span>', info['color'], info['estado'])
@@ -44,20 +38,29 @@ class NichoAdmin(ImportExportModelAdmin):
 
     def consola_tecnologica(self, obj):
         links = []
-        links.append(format_html('<a href="/imprimir/{}/" target="_blank" title="Ficha" style="text-decoration:none; font-size:18px;">📄</a>', obj.id))
-        links.append(format_html('<a href="{}" target="_blank" title="Título" style="text-decoration:none; margin-left:10px; font-size:18px;">📜</a>', reverse('generar_titulo_propiedad', args=[obj.id])))
+        # --- 1. TÉCNICO E IDENTIFICACIÓN ---
+        links.append(format_html('<a href="{}" target="_blank" title="FICHA PRO" style="text-decoration:none; font-size:18px;">💎</a>', reverse('ficha_tecnica_pro', args=[obj.id])))
+        links.append(format_html('<a href="{}" target="_blank" title="Reporte Inspección" style="text-decoration:none; margin-left:8px; font-size:18px;">🔍</a>', reverse('reporte_inspeccion', args=[obj.id])))
+        links.append(format_html('<a href="{}" target="_blank" title="Título de Propiedad" style="text-decoration:none; margin-left:8px; font-size:18px;">📜</a>', reverse('generar_titulo_propiedad', args=[obj.id])))
         
-        # EL VUELO: Ahora solo si existen coordenadas, y sin romper lo visual
+        # --- 2. GESTIÓN OPERATIVA ---
+        links.append(format_html('<a href="{}" target="_blank" title="Acta de Inhumación" style="text-decoration:none; margin-left:8px; font-size:18px;">📖</a>', reverse('acta_inhumacion', args=[obj.id])))
+        links.append(format_html('<a href="{}" target="_blank" title="Permiso Construcción" style="text-decoration:none; margin-left:8px; font-size:18px;">🧱</a>', reverse('permiso_construccion', args=[obj.id])))
+        links.append(format_html('<a href="{}" target="_blank" title="Traspaso Derechos" style="text-decoration:none; margin-left:8px; font-size:18px;">✍️</a>', reverse('traspaso_derechos', args=[obj.id])))
+
+        # --- 3. LEGAL Y FINANCIERO ---
+        links.append(format_html('<a href="{}" target="_blank" title="Certificación Solvencia" style="text-decoration:none; margin-left:8px; font-size:18px;">🏅</a>', reverse('solvencia_municipal', args=[obj.id])))
+        links.append(format_html('<a href="{}" target="_blank" title="Aviso de Mora" style="text-decoration:none; margin-left:8px; font-size:18px;">✉️</a>', reverse('aviso_mora', args=[obj.id])))
+        links.append(format_html('<a href="{}" target="_blank" title="Orden Exhumación" style="text-decoration:none; margin-left:8px; font-size:18px;">🏴</a>', reverse('orden_exhumacion', args=[obj.id])))
+        
+        # --- 4. UBICACIÓN ---
         if obj.lat and obj.lng:
             url_vuelo = f"/mapa/?lat={obj.lat}&lng={obj.lng}&z=21&codigo={obj.codigo}&popup=true"
-            links.append(format_html(
-                '<a href="{}" target="_blank" title="Mapa" style="text-decoration:none; margin-left:10px; font-size:18px;">📍</a>', 
-                url_vuelo
-            ))
+            links.append(format_html('<a href="{}" target="_blank" title="Mapa Satelital" style="text-decoration:none; margin-left:8px; font-size:18px;">📍</a>', url_vuelo))
+            
         return mark_safe(f'<div style="display:flex; justify-content:center; align-items:center;">{" ".join(links)}</div>')
     consola_tecnologica.short_description = "Acciones G.I.S."
 
-    # --- EXPORTADOR VELOZ ---
     @admin.action(description="🚀 Exportar Excel Rápido")
     def exportar_a_excel_veloz(self, request, queryset):
         response = HttpResponse(content_type='application/ms-excel')
@@ -71,7 +74,6 @@ class NichoAdmin(ImportExportModelAdmin):
         wb.save(response)
         return response
 
-    # --- DASHBOARD SUPERIOR (Restaurado) ---
     def changelist_view(self, request, extra_context=None):
         qs = self.get_queryset(request).aggregate(p=Sum('monto_arbitrio'), m=Count('id', filter=Q(monto_arbitrio=0)), t=Count('id'))
         extra_context = extra_context or {}
@@ -85,6 +87,14 @@ class NichoAdmin(ImportExportModelAdmin):
         )
         return super().changelist_view(request, extra_context=extra_context)
 
-    @admin.action(description="🏴 Marcar como Exhumado")
+    @admin.action(description="🏴 Ejecutar Exhumación (Liberar Nicho)")
     def marcar_exhumado_masivo(self, request, queryset):
-        queryset.update(esta_exhumado=True)
+        queryset.update(
+            nombre_difunto="", 
+            propietario="", 
+            monto_arbitrio=0.00, 
+            esta_exhumado=True,
+            fecha_pago=None,
+            fecha_vencimiento=None
+        )
+        self.message_user(request, "Exhumación masiva completada. Los nichos ahora aparecen como DISPONIBLES.")
