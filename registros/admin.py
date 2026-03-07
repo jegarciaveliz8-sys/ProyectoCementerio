@@ -1,89 +1,90 @@
-import xlwt
-from django.http import HttpResponse
+import urllib.parse
 from django.contrib import admin
-from .models import Nicho, ReporteDano
 from django.utils.html import format_html
-from django.utils.safestring import mark_safe
 from django.db.models import Sum, Count, Q
-from django.urls import reverse
+from django.utils.safestring import mark_safe
+from .models import Nicho, ReporteDano
 from import_export.admin import ImportExportModelAdmin
-from import_export import resources
-
-# 1. Configuración para que las fotos aparezcan DENTRO del nicho
-class ReporteDanoInline(admin.TabularInline):
-    model = ReporteDano
-    extra = 1
-    fields = ('foto_evidencia', 'descripcion', 'estado', 'nivel_urgencia')
-    verbose_name = "Fotografía / Reporte de Campo"
-    verbose_name_plural = "Historial de Fotografías y Daños"
-
-class NichoResource(resources.ModelResource):
-    class Meta:
-        model = Nicho
-        fields = ('id', 'codigo', 'nombre_difunto', 'propietario', 'monto_arbitrio', 'fecha_vencimiento')
+from auditlog.models import LogEntry
+from django.contrib.contenttypes.models import ContentType
 
 @admin.register(Nicho)
 class NichoAdmin(ImportExportModelAdmin):
-    resource_class = NichoResource
-    list_display = ('codigo', 'nombre_difunto', 'propietario', 'status_financiero', 'estado_legal', 'consola_tecnologica')
-    list_editable = ('nombre_difunto', 'propietario')
-    search_fields = ('codigo', 'nombre_difunto', 'propietario')
-    ordering = ('id',) 
-    list_per_page = 50 
-    list_filter = ('esta_exhumado', 'monto_arbitrio', ('fecha_vencimiento', admin.DateFieldListFilter), 'fecha_pago')
-    actions = ['exportar_a_excel_veloz', 'marcar_exhumado_masivo']
+    list_per_page = 50
+    ordering = ('codigo',)
     
-    # ESTA LÍNEA UNE LOS DOS MODELOS:
-    inlines = [ReporteDanoInline]
+    # Agregamos 'historial' para ver quién tocó el registro
+    list_display = (
+        'codigo', 'ver_qr', 'ver_foto', 'nombre_difunto', 
+        'lat', 'lng', 'boton_gps', 'monto_arbitrio', 'accion_cobro', 'ver_logs'
+    )
+    
+    list_editable = ('lat', 'lng', 'monto_arbitrio')
+    readonly_fields = ('ver_foto_grande', 'ver_qr_grande')
+    search_fields = ('codigo', 'nombre_difunto', 'propietario')
 
-    def estado_legal(self, obj):
-        info = obj.semaforo_estado 
-        return format_html('<span style="background:{}; color:white; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; text-transform:uppercase;">{}</span>', info['color'], info['estado'])
-    estado_legal.short_description = "Estado Legal"
+    # --- FUNCIONES DE NICHO ---
+    def ver_qr(self, obj):
+        if obj.qr_code: return format_html('<img src="{}" style="width:40px;height:40px;" />', obj.qr_code.url)
+        return "-"
 
-    def status_financiero(self, obj):
+    def ver_foto(self, obj):
+        if obj.foto_nicho: return format_html('<img src="{}" style="width:40px;height:40px;border-radius:5px;object-fit:cover;" />', obj.foto_nicho.url)
+        return mark_safe('<div style="width:40px;height:40px;background:#f1f5f9;border:1px dashed #ccc;border-radius:5px;"></div>')
+
+    def boton_gps(self, obj):
+        js = f"navigator.geolocation.getCurrentPosition(function(p){{ var r=document.activeElement.closest('tr'); r.querySelector('.field-lat input').value=p.coords.latitude.toFixed(8); r.querySelector('.field-lng input').value=p.coords.longitude.toFixed(8); }});"
+        return mark_safe(f'<button type="button" onclick="{js}" style="background:#0f172a;color:white;border:none;padding:4px 8px;border-radius:4px;font-size:10px;cursor:pointer;">GPS</button>')
+
+    def accion_cobro(self, obj):
         if obj.monto_arbitrio > 0:
-            return format_html('<b style="color:#28a745;">✅ Q{}</b>', obj.monto_arbitrio)
-        return mark_safe('<b style="color:#dc3545;">🚨 MORA</b>')
-    status_financiero.short_description = "Finanzas"
+            msg = urllib.parse.quote(f"Muni Sanarate: Deuda Q{obj.monto_arbitrio} nicho {obj.codigo}.")
+            return format_html('<a href="https://wa.me/?text={}" target="_blank" style="color:#16a34a;font-weight:bold;">📲 WA</a>', msg)
+        return "-"
 
-    def consola_tecnologica(self, obj):
-        links = []
-        links.append(format_html('<a href="{}" target="_blank" title="FICHA PRO" style="text-decoration:none; font-size:18px;">💎</a>', reverse('ficha_tecnica_pro', args=[obj.id])))
-        links.append(format_html('<a href="{}" target="_blank" title="Reporte Inspección" style="text-decoration:none; margin-left:8px; font-size:18px;">🔍</a>', reverse('reporte_inspeccion', args=[obj.id])))
-        links.append(format_html('<a href="{}" target="_blank" title="Título de Propiedad" style="text-decoration:none; margin-left:8px; font-size:18px;">📜</a>', reverse('generar_titulo_propiedad', args=[obj.id])))
-        
-        if obj.lat and obj.lng:
-            url_vuelo = f"/mapa/?lat={obj.lat}&lng={obj.lng}&z=21&codigo={obj.codigo}&popup=true"
-            links.append(format_html('<a href="{}" target="_blank" title="Mapa Satelital" style="text-decoration:none; margin-left:8px; font-size:18px;">📍</a>', url_vuelo))
-            
-        return mark_safe(f'<div style="display:flex; justify-content:center; align-items:center;">{" ".join(links)}</div>')
-    consola_tecnologica.short_description = "Acciones G.I.S."
+    def ver_logs(self, obj):
+        # Link directo al historial de este nicho específico
+        ct = ContentType.objects.get_for_model(obj)
+        url = f"/admin/auditlog/logentry/?object_id={obj.pk}&content_type={ct.pk}"
+        return format_html('<a href="{}" style="font-size:10px;color:#64748b;">🕒 Ver Cambios</a>', url)
+    ver_logs.short_description = "AUDITORÍA"
 
-    @admin.action(description="🚀 Exportar Excel Rápido")
-    def exportar_a_excel_veloz(self, request, queryset):
-        response = HttpResponse(content_type='application/ms-excel')
-        response['Content-Disposition'] = 'attachment; filename="Sanarate_Reporte.xls"'
-        wb = xlwt.Workbook(encoding='utf-8')
-        ws = wb.add_sheet('Nichos')
-        for i, col in enumerate(['Codigo', 'Difunto', 'Propietario', 'Monto']):
-            ws.write(0, i, col)
-        for r, obj in enumerate(queryset, 1):
-            ws.write(r, 0, obj.codigo); ws.write(r, 1, obj.nombre_difunto); ws.write(r, 2, obj.propietario); ws.write(r, 3, obj.monto_arbitrio)
-        wb.save(response)
-        return response
+    def changelist_view(self, request, extra_context=None):
+        qs = self.get_queryset(request)
+        stats = qs.aggregate(mora=Sum('monto_arbitrio'), total=Count('id'), mapeados=Count('id', filter=Q(lat__gt=0)))
+        extra_context = extra_context or {}
+        header = f'<div style="background:#0f172a;color:white;padding:15px;border-radius:10px;margin-bottom:15px;display:flex;justify-content:space-between;"><b>💰 MORA: Q{stats["mora"] or 0:,.2f}</b> <b>📍 GPS: {stats["mapeados"]}/{stats["total"]}</b></div>'
+        extra_context['title'] = mark_safe(header)
+        return super().changelist_view(request, extra_context=extra_context)
 
-    @admin.action(description="🏴 Ejecutar Exhumación (Liberar Nicho)")
-    def marcar_exhumado_masivo(self, request, queryset):
-        queryset.update(nombre_difunto="", propietario="", monto_arbitrio=0.00, esta_exhumado=True)
-        self.message_user(request, "Exhumación masiva completada.")
+    # --- PREVIEWS ---
+    def ver_foto_grande(self, obj):
+        if obj.foto_nicho: return format_html('<img src="{}" style="max-width:400px;border-radius:10px;" />', obj.foto_nicho.url)
+        return "Sin foto"
+    def ver_qr_grande(self, obj):
+        if obj.qr_code: return format_html('<img src="{}" style="width:200px;" />', obj.qr_code.url)
+        return "No generado"
 
 @admin.register(ReporteDano)
 class ReporteDanoAdmin(admin.ModelAdmin):
-    list_display = ('nicho', 'estado', 'nivel_urgencia', 'fecha_reporte', 'ver_foto')
-    list_editable = ('estado',)
+    list_display = ('nicho_link', 'ver_evidencia', 'urgencia_badge', 'estado_badge', 'reportado_por')
+    list_filter = ('estado', 'nivel_urgencia')
+    readonly_fields = ('ver_foto_full',)
+
+    def nicho_link(self, obj): return format_html('<b>{}</b>', obj.nicho.codigo)
     
-    def ver_foto(self, obj):
-        if obj.foto_evidencia:
-            return format_html('<a href="{}" target="_blank">🖼️ Ver</a>', obj.foto_evidencia.url)
+    def ver_evidencia(self, obj):
+        if obj.foto_evidencia: return format_html('<img src="{}" style="width:60px;height:60px;object-fit:cover;border:2px solid #ef4444;border-radius:4px;" />', obj.foto_evidencia.url)
         return "Sin foto"
+
+    def urgencia_badge(self, obj):
+        color = {'LEVE':'#22c55e', 'MODERADO':'#eab308', 'CRITICO':'#ef4444'}.get(obj.nivel_urgencia, '#ccc')
+        return mark_safe(f'<b style="color:white;background:{color};padding:3px 8px;border-radius:10px;font-size:10px;">{obj.nivel_urgencia}</b>')
+
+    def estado_badge(self, obj):
+        color = {'PENDIENTE':'#ef4444', 'EN_PROCESO':'#3b82f6', 'RESUELTO':'#22c55e'}.get(obj.estado, '#ccc')
+        return mark_safe(f'<b style="color:{color};border:1px solid {color};padding:2px 5px;border-radius:4px;font-size:10px;">{obj.get_estado_display()}</b>')
+
+    def ver_foto_full(self, obj):
+        if obj.foto_evidencia: return format_html('<img src="{}" style="max-width:500px;border-radius:10px;" />', obj.foto_evidencia.url)
+        return "No hay evidencia"

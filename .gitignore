@@ -1,9 +1,8 @@
-*.pyc
-__pycache__/
 db.sqlite3
+*.csv
+*.json
+__pycache__/
+*.pyc
 media/
-*.zip
-venv*/
-.env
+venv_cementerio/
 .DS_Store
-staticfiles/
