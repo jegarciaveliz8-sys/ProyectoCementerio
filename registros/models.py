@@ -26,6 +26,7 @@ class Nicho(models.Model):
     qr_code = models.ImageField(upload_to='qrs/', blank=True, null=True)
     esta_exhumado = models.BooleanField(default=False)
     acta_exhumacion = models.FileField(upload_to='actas/', null=True, blank=True)
+    titulo_propiedad = models.FileField(upload_to='titulos/', null=True, blank=True)
     notas_legales = models.TextField(null=True, blank=True)
 
     def __str__(self):
