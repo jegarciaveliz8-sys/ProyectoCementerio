@@ -77,3 +77,9 @@ CSRF_TRUSTED_ORIGINS = ['https://uninferentially-fibrillar-ward.ngrok-free.dev']
 
 # Configuración necesaria para Import/Export
 IMPORT_EXPORT_USE_TRANSACTIONS = True
+INSTALLED_APPS += ['dbbackup']
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+    'dbbackup': {'BACKEND': 'django.core.files.storage.FileSystemStorage', 'OPTIONS': {'location': '/home/jose/respaldos_cementerio/'}},
+}

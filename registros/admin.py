@@ -6,22 +6,16 @@ from django.utils.safestring import mark_safe
 from .models import Nicho, ReporteDano
 from import_export.admin import ImportExportModelAdmin
 
-# FILTRO 1: Para ver quién debe documentos
 class DocumentacionFilter(admin.SimpleListFilter):
     title = 'Estado de Expediente'
     parameter_name = 'expediente'
     def lookups(self, request, model_admin):
-        return (
-            ('completo', '✅ Todo Completo'),
-            ('sin_titulo', '❌ Falta No. Título'),
-            ('con_acta', '🦴 Con Acta Exhumación')
-        )
+        return (('completo', '✅ Todo Completo'), ('sin_titulo', '❌ Falta No. Título'), ('con_acta', '🦴 Con Acta Exhumación'))
     def queryset(self, request, queryset):
         if self.value() == 'completo': return queryset.exclude(numero_titulo__isnull=True).exclude(numero_titulo='')
         if self.value() == 'sin_titulo': return queryset.filter(Q(numero_titulo__isnull=True) | Q(numero_titulo=''))
         if self.value() == 'con_acta': return queryset.exclude(numero_acta__isnull=True).exclude(numero_acta='')
 
-# FILTRO 2: Para ver qué falta mapear en el cementerio
 class GPSFilter(admin.SimpleListFilter):
     title = 'Estado de Mapeo'
     parameter_name = 'tiene_gps'
@@ -38,42 +32,32 @@ class NichoAdmin(ImportExportModelAdmin):
     
     list_display = (
         'codigo', 'foto_miniatura', 'nombre_difunto_corto', 
-        'monto_arbitrio', 'numero_titulo', 'numero_acta', 
-        'lat', 'lng', 'estado_mora', 
-        'ver_documentos', 'boton_gps', 'auditoria'
+        'numero_titulo', 'lat', 'lng', 'estado_mora', 
+        'ver_mapa_link', 'boton_gps', 'auditoria'
     )
     
-    list_editable = ('monto_arbitrio', 'numero_titulo', 'numero_acta', 'lat', 'lng')
-    
-    # AQUÍ AGREGAMOS TODOS LOS FILTROS
-    list_filter = (
-        GPSFilter, 
-        DocumentacionFilter, 
-        'esta_exhumado', 
-        ('fecha_vencimiento', admin.DateFieldListFilter)
-    )
-    
-    search_fields = ('codigo', 'nombre_difunto', 'numero_titulo', 'numero_acta')
+    list_editable = ('lat', 'lng', 'numero_titulo')
+    list_filter = (GPSFilter, DocumentacionFilter, 'esta_exhumado', ('fecha_vencimiento', admin.DateFieldListFilter))
+    search_fields = ('codigo', 'nombre_difunto', 'lat', 'lng')
+
+    def ver_mapa_link(self, obj):
+        if obj.lat and obj.lng:
+            # FORMATO DE ENLACE UNIVERSAL DE GOOGLE MAPS
+            url = f"https://www.google.com/maps/search/?api=1&query={obj.lat},{obj.lng}"
+            return format_html('<a href="{}" target="_blank" style="background:#ea4335;color:white;padding:5px 10px;border-radius:5px;text-decoration:none;font-size:11px;font-weight:bold;box-shadow: 1px 1px 3px rgba(0,0,0,0.2);">📍 VER EN MAPA</a>', url)
+        return mark_safe('<span style="color:#94a3b8;font-size:10px;">Sin GPS</span>')
+    ver_mapa_link.short_description = "GOOGLE MAPS"
 
     def foto_miniatura(self, obj):
         if obj.foto_nicho:
             return format_html('<img src="{}" style="width:40px;height:40px;border-radius:5px;object-fit:cover;"/>', obj.foto_nicho.url)
-        return mark_safe('<span style="color:#94a3b8;font-size:9px;">📷 Sin foto</span>')
+        return mark_safe('<span style="color:#94a3b8;font-size:9px;">📷 No</span>')
     foto_miniatura.short_description = "FOTO"
 
     def estado_mora(self, obj):
         res = obj.semaforo_estado
         return format_html('<span style="background:{}; color:white; padding:3px 6px; border-radius:4px; font-size:10px; font-weight:bold; display:block; text-align:center;">{}</span>', res['color'], res['estado'])
     estado_mora.short_description = "MORA"
-
-    def ver_documentos(self, obj):
-        links = []
-        tit = getattr(obj, 'titulo_propiedad', None)
-        act = getattr(obj, 'acta_exhumacion', None)
-        if tit: links.append(f'<a href="{tit.url}" target="_blank" style="color:#16a34a; font-weight:bold;">📄 TÍTULO</a>')
-        if act: links.append(f'<a href="{act.url}" target="_blank" style="color:#0284c7; font-weight:bold;">🦴 ACTA</a>')
-        return mark_safe("<br>".join(links)) if links else mark_safe('<span style="color:#e11d48;">❌</span>')
-    ver_documentos.short_description = "DOCS"
 
     def nombre_difunto_corto(self, obj):
         nombre = obj.nombre_difunto or "DISPONIBLE"
@@ -82,11 +66,11 @@ class NichoAdmin(ImportExportModelAdmin):
 
     def boton_gps(self, obj):
         js = "navigator.geolocation.getCurrentPosition(function(p){ var r=document.activeElement.closest('tr'); r.querySelector('.field-lat input').value=p.coords.latitude.toFixed(8); r.querySelector('.field-lng input').value=p.coords.longitude.toFixed(8); r.style.background='#fff3cd'; });"
-        return mark_safe(f'<button type="button" onclick="{js}" style="background:#0f172a;color:white;border:none;padding:5px;border-radius:3px;font-size:10px;cursor:pointer;">🛰️ GPS</button>')
+        return mark_safe(f'<button type="button" onclick="{js}" style="background:#4285f4;color:white;border:none;padding:5px 8px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:bold;">🛰️ CAPTURAR</button>')
 
     def auditoria(self, obj):
-        return format_html('<a href="/admin/admin_tools/logentry/?object_id={}" style="font-size:10px;color:#3b82f6;">Historial</a>', obj.id)
-    auditoria.short_description = "AUDITORÍA"
+        return format_html('<a href="/admin/admin_tools/logentry/?object_id={}" style="font-size:10px;color:#3b82f6;">Log</a>', obj.id)
+    auditoria.short_description = "HIST."
 
     def changelist_view(self, request, extra_context=None):
         stats = Nicho.objects.aggregate(mapeados=Count('id', filter=Q(lat__gt=0)), total=Count('id'))
