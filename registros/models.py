@@ -6,11 +6,9 @@ import os
 from io import BytesIO
 from django.core.files import File
 from django.utils import timezone
-from datetime import timedelta
 from PIL import Image
-import pillow_heif  # Soporte para formatos de iPhone
+import pillow_heif
 
-# Registrar el soporte para HEIC/HEIF
 pillow_heif.register_heif_opener()
 
 class Nicho(models.Model):
@@ -25,8 +23,15 @@ class Nicho(models.Model):
     foto_nicho = models.ImageField(upload_to='fotos/', blank=True, null=True)
     qr_code = models.ImageField(upload_to='qrs/', blank=True, null=True)
     esta_exhumado = models.BooleanField(default=False)
-    acta_exhumacion = models.FileField(upload_to='actas/', null=True, blank=True)
-    titulo_propiedad = models.FileField(upload_to='titulos/', null=True, blank=True)
+    
+    # --- NUEVAS FUNCIONES ADMINISTRATIVAS (TEXTO) ---
+    numero_acta = models.CharField(max_length=50, blank=True, null=True, verbose_name="No. Acta")
+    numero_titulo = models.CharField(max_length=50, blank=True, null=True, verbose_name="No. Título")
+    numero_formulario = models.CharField(max_length=50, blank=True, null=True, verbose_name="No. Formulario")
+    
+    # --- ARCHIVOS ADJUNTOS ---
+    archivo_acta = models.FileField(upload_to='actas/', null=True, blank=True)
+    archivo_titulo = models.FileField(upload_to='titulos/', null=True, blank=True)
     notas_legales = models.TextField(null=True, blank=True)
 
     def __str__(self):
@@ -80,34 +85,18 @@ class ReporteDano(models.Model):
     def save(self, *args, **kwargs):
         if self.foto_evidencia:
             try:
-                # 1. Abrimos la imagen (ahora soporta HEIC)
                 img = Image.open(self.foto_evidencia)
-                
-                # 2. Redimensionar
                 if img.height > 1200 or img.width > 1200:
                     img.thumbnail((1200, 1200))
-                
-                # 3. Convertir a RGB (JPEG no soporta transparencia de PNG/HEIC)
                 if img.mode != 'RGB':
                     img = img.convert('RGB')
-                
-                # 4. Guardar comprimida
                 temp_buffer = BytesIO()
                 img.save(temp_buffer, format='JPEG', quality=70)
                 temp_buffer.seek(0)
-                
-                # Cambiamos la extensión a .jpg para evitar confusiones
                 nuevo_nombre = os.path.splitext(self.foto_evidencia.name)[0] + ".jpg"
-                
-                self.foto_evidencia.save(
-                    nuevo_nombre,
-                    File(temp_buffer, name=nuevo_nombre),
-                    save=False
-                )
+                self.foto_evidencia.save(nuevo_nombre, File(temp_buffer, name=nuevo_nombre), save=False)
             except Exception as e:
                 print(f"Error procesando imagen: {e}")
-                # Si falla la compresión, guardamos el archivo original para no perder la data
-
         super().save(*args, **kwargs)
 
     class Meta:
