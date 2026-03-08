@@ -24,12 +24,10 @@ class Nicho(models.Model):
     qr_code = models.ImageField(upload_to='qrs/', blank=True, null=True)
     esta_exhumado = models.BooleanField(default=False)
     
-    # --- NUEVAS FUNCIONES ADMINISTRATIVAS (TEXTO) ---
     numero_acta = models.CharField(max_length=50, blank=True, null=True, verbose_name="No. Acta")
     numero_titulo = models.CharField(max_length=50, blank=True, null=True, verbose_name="No. Título")
     numero_formulario = models.CharField(max_length=50, blank=True, null=True, verbose_name="No. Formulario")
     
-    # --- ARCHIVOS ADJUNTOS ---
     archivo_acta = models.FileField(upload_to='actas/', null=True, blank=True)
     archivo_titulo = models.FileField(upload_to='titulos/', null=True, blank=True)
     notas_legales = models.TextField(null=True, blank=True)
@@ -103,5 +101,7 @@ class ReporteDano(models.Model):
         verbose_name = "Reporte de Daño"
         verbose_name_plural = "Control de Daños"
 
-auditlog.register(Nicho)
-auditlog.register(ReporteDano)
+# REGISTRO DE AUDITORÍA OPTIMIZADO
+auditlog.register(Nicho, exclude_fields=['qr_code', 'foto_nicho', 'archivo_acta', 'archivo_titulo'])
+auditlog.register(ReporteDano, exclude_fields=['foto_evidencia'])
+from .models_pagos import PagoArbitrio
