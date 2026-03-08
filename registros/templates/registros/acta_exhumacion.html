@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: 'Times New Roman', Times, serif; padding: 50px; line-height: 1.8; }
+        .escudo { text-align: center; font-weight: bold; font-size: 20px; margin-bottom: 5px; }
+        .sub { text-align: center; font-size: 14px; margin-bottom: 30px; border-bottom: 2px solid #000; }
+        .titulo-acta { text-align: center; font-weight: bold; font-size: 18px; margin-bottom: 20px; }
+        .cuerpo { text-align: justify; font-size: 16px; }
+        .negrita { font-weight: bold; }
+        .firmas { margin-top: 80px; display: flex; justify-content: space-around; text-align: center; }
+        .linea-firma { border-top: 1px solid #000; width: 200px; margin-top: 40px; }
+    </style>
+</head>
+<body>
+    <div class="escudo">MUNICIPALIDAD DE SANARATE, EL PROGRESO</div>
+    <div class="sub">ADMINISTRACIÓN DE CEMENTERIOS - ACTA DE EXHUMACIÓN</div>
+
+    <div class="titulo-acta">ACTA No. {{ nicho.numero_acta|default:"_______-2026" }}</div>
+
+    <div class="cuerpo">
+        En el municipio de Sanarate, departamento de El Progreso, siendo las ______ horas del día 
+        <span class="negrita">{{ hoy|date:"d" }} de {{ hoy|date:"F" }} del año {{ hoy|date:"Y" }}</span>, 
+        el suscrito Administrador del Cementerio Municipal, en presencia de los testigos de asistencia, 
+        procede a hacer constar la EXHUMACIÓN de los restos que yacen en el nicho identificado con el código: 
+        <span class="negrita">{{ nicho.codigo }}</span>, el cual se encuentra a nombre de: 
+        <span class="negrita">{{ nicho.propietario|default:"---" }}</span>, conteniendo los restos de quien en vida fuera: 
+        <span class="negrita">{{ nicho.nombre_difunto|default:"DIFUNTO NO IDENTIFICADO" }}</span>.
+        <br><br>
+        Dicha acción se fundamenta en el vencimiento del plazo de arrendamiento y la falta de pago de arbitrios municipales, 
+        según consta en el expediente administrativo con número de título <span class="negrita">{{ nicho.numero_titulo|default:"N/A" }}</span>.
+        Los restos serán trasladados al osario común municipal de conformidad con el Reglamento de Cementerios vigente.
+    </div>
+
+    <div class="firmas">
+        <div>
+            <div class="linea-firma"></div>
+            (f) Administrador del Cementerio
+        </div>
+        <div>
+            <div class="linea-firma"></div>
+            (f) Registrador Civil / Municipal
+        </div>
+    </div>
+    
+    <div style="margin-top: 40px; font-size: 10px; color: grey;">
+        Sello de Seguridad: {{ sello }} | Registro Digital Sanarate
+    </div>
+    <script>window.print();</script>
+</body>
+</html>

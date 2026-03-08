@@ -10,10 +10,30 @@ from django.conf import settings
 from datetime import date
 
 # Librerías de Importación
-from .models import Nicho, ReporteDano
+from .models import Nicho, ReporteDano, ActaExhumacion
+from .models_pagos import PagoArbitrio
 from import_export.admin import ImportExportModelAdmin
 
-# --- FILTROS (INTOCABLES) ---
+# --- HISTORIAL DE PAGOS (INLINE - INTOCABLE) ---
+class PagoArbitrioInline(admin.TabularInline):
+    model = PagoArbitrio
+    extra = 1
+    fields = ('fecha_pago', 'numero_recibo', 'monto_pagado', 'observaciones')
+
+# --- LIBRO DE ACTAS PROFESIONAL (NUEVO INLINE) ---
+class ActaExhumacionInline(admin.StackedInline):
+    model = ActaExhumacion
+    extra = 1
+    verbose_name = "Registro de Exhumación (Libro de Actas)"
+    verbose_name_plural = "Historial de Exhumaciones en este Nicho"
+    classes = ('collapse',)
+    fieldsets = (
+        ('Datos de Control', {'fields': ('numero_acta', 'tipo', 'fecha_proceso', 'responsable_muni')}),
+        ('Solicitante', {'fields': ('solicitante_nombre', 'solicitante_dpi', 'solicitante_parentesco')}),
+        ('Destino', {'fields': ('destino_restos', 'observaciones_legales')}),
+    )
+
+# --- FILTROS (MANTENIENDO TU LÓGICA EXACTA) ---
 class MoraConTituloFilter(admin.SimpleListFilter):
     title = 'Prioridad de Cobro'
     parameter_name = 'prioridad_cobro'
@@ -49,23 +69,21 @@ class NichoAdmin(ImportExportModelAdmin):
     list_per_page = 50
     ordering = ('codigo',)
     
-    # --- LIST_DISPLAY (INTOCABLE) ---
+    # IMPORTANTE: Aquí activamos ambos inlines
+    inlines = [PagoArbitrioInline, ActaExhumacionInline]
+    
     list_display = (
         'codigo', 'foto_miniatura', 'nombre_difunto_corto', 
         'numero_titulo', 'lat', 'lng', 'monto_arbitrio', 
         'estado_mora', 'ver_mapa_link', 
         'boton_titulo', 'boton_solvencia', 'boton_cobro', 
-        'boton_gps'
+        'boton_acta', 'boton_gps'
     )
     
-    # --- LIST_EDITABLE (INTOCABLE) ---
     list_editable = ('numero_titulo', 'lat', 'lng', 'monto_arbitrio')
-    
-    # --- LIST_FILTER (INTOCABLE) ---
     list_filter = (MoraConTituloFilter, GPSFilter, DocumentacionFilter, 'esta_exhumado', ('fecha_vencimiento', admin.DateFieldListFilter))
     search_fields = ('codigo', 'nombre_difunto', 'propietario')
 
-    # --- ACCIONES NUEVAS (AÑADIDAS SIN TOCAR LO ANTERIOR) ---
     actions = ['exportar_lista_cobro']
 
     @admin.action(description="📦 Descargar Listado para Notificadores (Excel/CSV)")
@@ -78,7 +96,31 @@ class NichoAdmin(ImportExportModelAdmin):
             writer.writerow([n.codigo, n.propietario, n.nombre_difunto, n.monto_arbitrio, n.semaforo_estado['estado']])
         return response
 
-    # --- BOTONES Y FUNCIONES (INTOCABLES) ---
+    def boton_acta(self, obj):
+        if obj.esta_exhumado:
+            html = f"""
+            <div class="acta-wrapper" style="position:relative; display:inline-block;">
+                <button type="button" style="background:#475569; color:white; padding:4px 6px; border-radius:4px; border:none; font-weight:bold; font-size:9px; cursor:pointer;">
+                   🦴 ACTA ▾
+                </button>
+                <div class="acta-menu" style="display:none; position:absolute; right:0; background:white; min-width:140px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:9999; border-radius:4px; overflow:hidden; border:1px solid #ddd;">
+                    <a href="/nicho/{obj.id}/acta-exhumacion/?tipo=ADMINISTRATIVA" target="_blank" style="display:block; padding:8px; color:#334155; text-decoration:none; font-size:10px; border-bottom:1px solid #eee;">🏛️ Municipal</a>
+                    <a href="/nicho/{obj.id}/acta-exhumacion/?tipo=JUDICIAL" target="_blank" style="display:block; padding:8px; color:#b91c1c; text-decoration:none; font-size:10px; border-bottom:1px solid #eee;">⚖️ Judicial</a>
+                    <a href="/nicho/{obj.id}/acta-exhumacion/?tipo=FAMILIAR" target="_blank" style="display:block; padding:8px; color:#15803d; text-decoration:none; font-size:10px; border-bottom:1px solid #eee;">👨‍👩‍👦 Familiar</a>
+                    <a href="/nicho/{obj.id}/acta-exhumacion/?tipo=SANITARIA" target="_blank" style="display:block; padding:8px; color:#d97706; text-decoration:none; font-size:10px;">☣️ Sanitaria</a>
+                </div>
+            </div>
+            <script>
+                document.querySelectorAll('.acta-wrapper').forEach(w => {{
+                    w.onmouseover = () => w.querySelector('.acta-menu').style.display = 'block';
+                    w.onmouseout = () => w.querySelector('.acta-menu').style.display = 'none';
+                }});
+            </script>
+            """
+            return mark_safe(html)
+        return mark_safe('<span style="color:#cbd5e1;font-size:9px;">-</span>')
+    boton_acta.short_description = "EXPEDIENTE"
+
     def boton_cobro(self, obj):
         url = f"/nicho/{obj.id}/aviso-mora/"
         return format_html('<a href="{}" target="_blank" style="background:#dc2626;color:white;padding:4px 6px;border-radius:4px;text-decoration:none;font-weight:bold;font-size:9px;">🚫 COBRO</a>', url)
@@ -142,3 +184,4 @@ class NichoAdmin(ImportExportModelAdmin):
         return response
 
 admin.site.register(ReporteDano)
+admin.site.register(ActaExhumacion)

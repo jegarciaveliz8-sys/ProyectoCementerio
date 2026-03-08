@@ -24,7 +24,7 @@ class Nicho(models.Model):
     qr_code = models.ImageField(upload_to='qrs/', blank=True, null=True)
     esta_exhumado = models.BooleanField(default=False)
     
-    numero_acta = models.CharField(max_length=50, blank=True, null=True, verbose_name="No. Acta")
+    numero_acta = models.CharField(max_length=50, blank=True, null=True, verbose_name="No. Acta Actual")
     numero_titulo = models.CharField(max_length=50, blank=True, null=True, verbose_name="No. Título")
     numero_formulario = models.CharField(max_length=50, blank=True, null=True, verbose_name="No. Formulario")
     
@@ -69,39 +69,80 @@ class Nicho(models.Model):
         self.qr_code.save(filename, File(buffer), save=False)
         super().save(*args, **kwargs)
 
+class ActaExhumacion(models.Model):
+    TIPOS = [
+        ('ADMINISTRATIVA', '🏛️ Municipal (Mora/Vencimiento)'),
+        ('JUDICIAL', '⚖️ Judicial (Orden MP/Juez)'),
+        ('FAMILIAR', '👨👩👦 Familiar (Voluntaria)'),
+        ('SANITARIA', '☣️ Sanitaria (Salud Pública)'),
+    ]
+
+    nicho = models.ForeignKey(Nicho, on_delete=models.CASCADE, related_name='historial_actas')
+    fecha_proceso = models.DateTimeField(default=timezone.now)
+    tipo = models.CharField(max_length=20, choices=TIPOS, default='ADMINISTRATIVA')
+    numero_acta = models.CharField(max_length=50, unique=True, help_text="Ej: ACTA-2026-001")
+    solicitante_nombre = models.CharField(max_length=200, verbose_name="Nombre del Requirente")
+    solicitante_dpi = models.CharField(max_length=20, verbose_name="DPI / CUI")
+    solicitante_parentesco = models.CharField(max_length=100, blank=True, null=True, verbose_name="Parentesco")
+    destino_restos = models.CharField(max_length=200, help_text="Ej: Osario General, Traslado a Guatemala, etc.")
+    observaciones_legales = models.TextField(blank=True, null=True)
+    responsable_muni = models.CharField(max_length=100, verbose_name="Administrador en Turno")
+    archivo_respaldo = models.FileField(upload_to='respaldos_actas/', null=True, blank=True, verbose_name="Documento de Respaldo")
+
+    class Meta:
+        verbose_name = "Acta de Exhumación"
+        verbose_name_plural = "Libro de Actas de Exhumación"
+        ordering = ['-fecha_proceso']
+
+    def __str__(self):
+        return f"{self.numero_acta} - {self.nicho.codigo}"
+
 class ReporteDano(models.Model):
     ESTADOS = [('PENDIENTE', '🔴 Pendiente'), ('EN_PROCESO', '🟡 En Proceso'), ('RESUELTO', '🟢 Resuelto')]
     NIVELES = [('LEVE', 'Leve'), ('MODERADO', 'Moderado'), ('CRITICO', 'Crítico')]
+    
     nicho = models.ForeignKey(Nicho, on_delete=models.CASCADE, related_name='reportes_danos')
     fecha_reporte = models.DateTimeField(auto_now_add=True)
     descripcion = models.TextField(blank=True, null=True)
     nivel_urgencia = models.CharField(max_length=10, choices=NIVELES, default='LEVE')
     estado = models.CharField(max_length=15, choices=ESTADOS, default='PENDIENTE')
     reportado_por = models.CharField(max_length=100, blank=True, null=True)
-    foto_evidencia = models.FileField(upload_to='danos/', blank=True, null=True)
+    
+    # Fotos Antes y Después
+    foto_evidencia = models.FileField(upload_to='danos/', blank=True, null=True, verbose_name="Foto del Daño (Antes)")
+    foto_reparacion = models.FileField(upload_to='reparaciones/', blank=True, null=True, verbose_name="Foto Reparado (Después)")
+    
+    fecha_solucion = models.DateTimeField(null=True, blank=True, verbose_name="Fecha de Reparación")
+    notas_reparacion = models.TextField(blank=True, null=True, verbose_name="Notas de la Reparación")
 
     def save(self, *args, **kwargs):
         if self.foto_evidencia:
-            try:
-                img = Image.open(self.foto_evidencia)
-                if img.height > 1200 or img.width > 1200:
-                    img.thumbnail((1200, 1200))
-                if img.mode != 'RGB':
-                    img = img.convert('RGB')
-                temp_buffer = BytesIO()
-                img.save(temp_buffer, format='JPEG', quality=70)
-                temp_buffer.seek(0)
-                nuevo_nombre = os.path.splitext(self.foto_evidencia.name)[0] + ".jpg"
-                self.foto_evidencia.save(nuevo_nombre, File(temp_buffer, name=nuevo_nombre), save=False)
-            except Exception as e:
-                print(f"Error procesando imagen: {e}")
+            self._optimizar_imagen(self.foto_evidencia)
+        if self.foto_reparacion:
+            self._optimizar_imagen(self.foto_reparacion)
         super().save(*args, **kwargs)
+
+    def _optimizar_imagen(self, campo_archivo):
+        try:
+            img = Image.open(campo_archivo)
+            if img.height > 1200 or img.width > 1200:
+                img.thumbnail((1200, 1200))
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+            temp_buffer = BytesIO()
+            img.save(temp_buffer, format='JPEG', quality=75)
+            temp_buffer.seek(0)
+            nuevo_nombre = os.path.splitext(campo_archivo.name)[0] + ".jpg"
+            campo_archivo.save(nuevo_nombre, File(temp_buffer, name=nuevo_nombre), save=False)
+        except Exception as e:
+            print(f"Error procesando imagen: {e}")
 
     class Meta:
         verbose_name = "Reporte de Daño"
         verbose_name_plural = "Control de Daños"
 
-# REGISTRO DE AUDITORÍA OPTIMIZADO
+# AUDITORÍA
 auditlog.register(Nicho, exclude_fields=['qr_code', 'foto_nicho', 'archivo_acta', 'archivo_titulo'])
-auditlog.register(ReporteDano, exclude_fields=['foto_evidencia'])
+auditlog.register(ActaExhumacion)
+auditlog.register(ReporteDano, exclude_fields=['foto_evidencia', 'foto_reparacion'])
 from .models_pagos import PagoArbitrio

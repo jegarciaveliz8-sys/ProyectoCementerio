@@ -19,6 +19,9 @@ urlpatterns = [
     path('nicho/<int:nicho_id>/aviso-mora/', views.pdf_notificacion_mora, name='aviso_mora'),
     path('nicho/<int:nicho_id>/aviso-mora-pdf/', views.pdf_notificacion_mora, name='pdf_notificacion_mora_alt'),
     
+    # Acta de Exhumación (NUEVA RUTA)
+    path('nicho/<int:nicho_id>/acta-exhumacion/', views.pdf_acta_exhumacion, name='pdf_acta_exhumacion'),
+    
     # --- CONSULTA PÚBLICA (EL QR) ---
     path('consulta/<str:codigo>/', views.consulta_publica, name='consulta_publica'),
     path('consultar/<str:codigo>/', views.consulta_publica),
